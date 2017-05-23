@@ -86,8 +86,7 @@ class Fitmodel:
         #free parameters for the particle spectral distribution
         #norm = pars[0] * u.Unit('1/erg')
         norm = 1e+0 * u.Unit('1/erg')
-        #index = pars[0]
-        index = -2.0
+        index = pars[0]
         injected_spectrum = dict(norm = norm.value, alpha = index, t_inj = 1.5)
         distance = 2.0*u.Mpc
 
