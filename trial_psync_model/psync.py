@@ -59,70 +59,54 @@ class PSynchrotron(Synchrotron):
             gt1 = 1.808 * cb / np.sqrt(1 + 3.4 * cb**2.)
             gt2 = 1 + 2.210 * cb**2. + 0.347 * cb**4.
             gt3 = 1 + 1.353 * cb**2. + 0.217 * cb**4.
-            #print(gt1 * (gt2 / gt3) * np.exp(-x))
             return gt1 * (gt2 / gt3) * np.exp(-x)
 
         CS1_0 = np.sqrt(3) * e.value**3 * self.B.to('G').value
         CS1_1 = (2 * np.pi * m_p.cgs.value * c.cgs.value
                  ** 2 * hbar.cgs.value * outspecene.to('erg').value)
         CS1 = CS1_0 / CS1_1
-        # print(np.where(CS1==0)[0])
+
 
         # Critical energy calculation
         Ec = 3 * e.value * hbar.cgs.value * self.B.to('G').value * self._gam**2
         Ec /= 2 * (m_p * c).cgs.value
-        # print(np.where(Ec==0)[0])
 
         EgEc = outspecene.to('erg').value / np.vstack(Ec)
-        # print(np.where(np.exp(-EgEc)==0)[0])
         dNdE = CS1 * Gtilde(EgEc)
-        # print(np.where(Gtilde(EgEc)==0)[0])
-
         spec = trapz_loglog(np.vstack(self._nelec) * dNdE,
                             self._gam, axis=0) / u.s / u.erg
         spec = spec.to('1/(s eV)')
-        #print("_OUTPUT FROM NELEC FUNC...\n", self._nelec)
-        #print("_OUTPUT FROM DNDE...\n", dNdE)
-        #print(np.vstack(self._nelec) * dNdE)
-        # print(self._nelec.shape)
-        # print(dNdE.shape)
 
         return spec
 
 
 if __name__ == '__main__':
 
-    #pdist = ECPL(4.3e30/u.eV,10*u.TeV,2.34, 30*u.TeV)
     pdist1 = ECPL(4.3e33 / u.eV, 1e3 * u.GeV, 1.3, 8e5 * u.TeV)
     pdist2 = EBPL(6.3e33 / u.eV, 8.5e3 * u.GeV, 8e4 * u.GeV, 1.35, 1.75, e_cutoff=9e5 * u.TeV)
     pdist3 = PL(1.3e33 / u.eV, 1e3 * u.GeV, 1.3)    
 
-    #SYN = Synchrotron(ECPL, B=10 * u.G, Eemin=1 * u.TeV, Eemax=1e19 * u.eV)
     SYN1 = PSynchrotron(pdist1, B=10 * u.G)
     SYN2 = PSynchrotron(pdist2, B=10 * u.G)
     SYN3 = PSynchrotron(pdist3, B=10 * u.G, Eemin=1e13 * u.eV, Eemax=3.2e18 * u.eV)
-    # print(SYN._gam)
+
     specf = np.logspace(14, 50, 100) * u.Hz
     spece = specf.to(u.eV, equivalencies=u.spectral())
     dist = 1 * u.Mpc
-    sed_SYN1 = SYN1.sed(spece, distance=dist)
-    sed_SYN2 = SYN2.sed(spece, distance=dist)
-    sed_SYN3 = SYN3.sed(spece, distance=dist)
-    # print(sed_SYN)
-    # print(SYN._nelec)
+
+    pds = [SYN1, SYN2, SYN3]
+    ls = ['-', '--', '-.']
+    colors = ['royalblue', 'red', 'black']
+    labels = ['Exp.cutoff PWL','BrokenPL w/cutoff','PowerLaw']
 
     fig = plt.figure(figsize=(15, 15))
     ax = fig.add_subplot(1, 1, 1)
     font = {'family': 'serif', 'color': 'black',
             'weight': 'normal', 'size': 16.0}
-    ax.loglog(spece, sed_SYN1, lw=3,
-            color='royalblue', ls='-', label='Exp.cutoff PWL')
-    plt.hold(True)
-    ax.loglog(spece, sed_SYN2, lw=3,
-            ls= '--', color='red', label='Broken PWL w/cutoff')
-    plt.hold(True)
-    ax.loglog(spece, sed_SYN3, lw=3,
-            ls= '-.', color='black', label='Powerlaw')
+    for pd, ls, cs, lb in zip(pds, ls, colors, labels):
+        sed = pd.sed(spece, dist)
+        ax.loglog(spece, sed, lw=2,
+                color=cs, ls=ls, label=lb)
     ax.set_xlabel('Energy (eV)', fontsize=14)
     ax.set_ylabel(
         r'$E^{2}*{\rm d}N/{\rm d}E\,[erg\,cm^{-2}\,s^{-1}]$', fontsize=17)
