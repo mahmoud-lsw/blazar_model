@@ -1,5 +1,6 @@
 from naima.models import Synchrotron
 from naima.models import ExponentialCutoffPowerLaw as ECPL
+from naima.models import ExponentialCutoffBrokenPowerLaw as EBPL
 from astropy.constants import m_e, m_p, c, e, h, hbar
 from astropy import units as u
 from naima.radiative import _validate_ene
@@ -91,15 +92,18 @@ class PSynchrotron(Synchrotron):
 if __name__ == '__main__':
 
     #pdist = ECPL(4.3e30/u.eV,10*u.TeV,2.34, 30*u.TeV)
-    pdist = ECPL(4.3e33 / u.eV, 1e3 * u.GeV, 1.3, 8e5 * u.TeV)
+    pdist1 = ECPL(4.3e33 / u.eV, 1e3 * u.GeV, 1.3, 8e5 * u.TeV)
+    pdist2 = EBPL(6.3e33 / u.eV, 8.5e3 * u.GeV, 8e4 * u.GeV, 1.35, 1.75, e_cutoff=9e5 * u.TeV)
 
     #SYN = Synchrotron(ECPL, B=10 * u.G, Eemin=1 * u.TeV, Eemax=1e19 * u.eV)
-    SYN = PSynchrotron(pdist, B=10 * u.G)
+    SYN1 = PSynchrotron(pdist1, B=10 * u.G)
+    SYN2 = PSynchrotron(pdist2, B=10 * u.G)
     # print(SYN._gam)
     specf = np.logspace(14, 28, 100) * u.Hz
     spece = specf.to(u.eV, equivalencies=u.spectral())
     dist = 1 * u.Mpc
-    sed_SYN = SYN.sed(spece, distance=dist)
+    sed_SYN1 = SYN1.sed(spece, distance=dist)
+    sed_SYN2 = SYN2.sed(spece, distance=dist)
     # print(sed_SYN)
     # print(SYN._nelec)
 
@@ -107,8 +111,11 @@ if __name__ == '__main__':
     ax = fig.add_subplot(1, 1, 1)
     font = {'family': 'serif', 'color': 'black',
             'weight': 'normal', 'size': 16.0}
-    ax.plot(spece, SYN.sed(spece, dist), lw=3,
-            color='royalblue', label='PSynchrotron')
+    ax.plot(spece, SYN1.sed(spece, dist), lw=3,
+            color='royalblue', label='Exp.cutoff PWL')
+    plt.hold(True)
+    ax.plot(spece, SYN2.sed(spece, dist), lw=3,
+            linestyle= '--', color='red', label='Broken PWL w/cutoff')
     ax.set_xlabel('Energy (eV)', fontsize=14)
     ax.set_ylabel(
         r'$E^{2}*{\rm d}N/{\rm d}E\,[erg\,cm^{-2}\,s^{-1}]$', fontsize=17)
@@ -117,5 +124,6 @@ if __name__ == '__main__':
     ax.set_xlim(1e0, 1e14)
     ax.set_xscale('log')
     ax.set_yscale('log')
-    plt.savefig('psync_ECPL.eps')
+    plt.legend(loc='best')
+    plt.savefig('psync_model_comparison.eps')
     plt.show()
