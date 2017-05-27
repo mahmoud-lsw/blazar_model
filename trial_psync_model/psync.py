@@ -1,4 +1,4 @@
-from naima.models import Synchrotron
+from naima.models import Synchrotron, PionDecay
 from naima.models import ExponentialCutoffPowerLaw as ECPL
 from naima.models import ExponentialCutoffBrokenPowerLaw as EBPL
 from naima.models import PowerLaw as PL
@@ -16,8 +16,7 @@ mpc2 = (m_p * c ** 2).cgs
 mpc2_unit = u.Unit(mpc2)
 e = e.gauss
 
-
-class PSynchrotron(Synchrotron):
+class PSynchrotron(Synchrotron, PionDecay):
     """Dummy Proton-Synchrotron Model
        Simplest modification of Naima e-synchrotron code.
        Compute synchrotron for random magnetic field according to approximation
@@ -25,34 +24,37 @@ class PSynchrotron(Synchrotron):
         (`arXiv:1006.1045 <http://arxiv.org/abs/1006.1045>`_).
     """
 
-    def __init__(self, particle_distribution, **kwargs):
+    def __init__(self, particle_distribution, B = 10 * u.G, **kwargs):
         self.particle_distribution = particle_distribution
+        self.B = B
         P = self.particle_distribution(1 * u.TeV)
         validate_scalar('particle distribution', P,
                         physical_type='differential energy')
-        self.Eemin = 1e12 * u.eV
-        self.Eemax = 4e20 * u.eV
-        self.nEed = 200
+        self.Epmin = 1e12 * u.eV
+        self.Epmax = 4e20 * u.eV
+        self.nEpd = 200
         self.__dict__.update(**kwargs)
 
-    @property
-    def _gam(self):
-        """Lorentz factor array of protons"""
-        log10gmin = np.log10(self.Eemin / mpc2).value
-        log10gmax = np.log10(self.Eemax / mpc2).value
-        return np.logspace(log10gmin, log10gmax,
-                           self.nEed * (log10gmax - log10gmin))
+
 
     @property
-    def _nelec(self):
-        """Particles per unit Lorentz factor"""
-        pd = self.particle_distribution(self._gam * mpc2)
+    def _lorentzfacarr(self):
+        """Lorentz factor of protons
+        """
+        return self._Ep / mpc2.to(u.GeV).value
+
+
+    @property
+    def _nproton(self):
+        """Proton dist per unit Lorentz factor
+        """
+        pd = self.particle_distribution(self._lorentzfacarr * mpc2)
         return pd.to(1 / mpc2_unit).value
 
-    def _spectrum(self, photon_energy):
+    def _spectrum(self, gammaE):
         """ Calculate diffenential photon spectrum for given energies
         """
-        outspecene = _validate_ene(photon_energy)
+        outspec = _validate_ene(gammaE)
 
         def Gtilde(x):
             cb = cbrt(x)
@@ -63,18 +65,18 @@ class PSynchrotron(Synchrotron):
 
         CS1_0 = np.sqrt(3) * e.value**3 * self.B.to('G').value
         CS1_1 = (2 * np.pi * m_p.cgs.value * c.cgs.value
-                 ** 2 * hbar.cgs.value * outspecene.to('erg').value)
+                 ** 2 * hbar.cgs.value * outspec.to('erg').value)
         CS1 = CS1_0 / CS1_1
 
 
         # Critical energy calculation
-        Ec = 3 * e.value * hbar.cgs.value * self.B.to('G').value * self._gam**2
+        Ec = 3 * e.value * hbar.cgs.value * self.B.to('G').value * self._lorentzfacarr**2
         Ec /= 2 * (m_p * c).cgs.value
 
-        EgEc = outspecene.to('erg').value / np.vstack(Ec)
+        EgEc = outspec.to('erg').value / np.vstack(Ec)
         dNdE = CS1 * Gtilde(EgEc)
-        spec = trapz_loglog(np.vstack(self._nelec) * dNdE,
-                            self._gam, axis=0) / u.s / u.erg
+        spec = trapz_loglog(np.vstack(self._nproton) * dNdE,
+                            self._lorentzfacarr, axis=0) / u.s / u.erg
         spec = spec.to('1/(s eV)')
 
         return spec
@@ -88,10 +90,10 @@ if __name__ == '__main__':
 
     SYN1 = PSynchrotron(pdist1, B=10 * u.G)
     SYN2 = PSynchrotron(pdist2, B=10 * u.G)
-    SYN3 = PSynchrotron(pdist3, B=10 * u.G, Eemin=1e13 * u.eV, Eemax=3.2e18 * u.eV)
+    SYN3 = PSynchrotron(pdist3, B=10 * u.G, Epmin=1e13 * u.eV, Epmax=3.2e18 * u.eV)
 
-    specf = np.logspace(14, 50, 100) * u.Hz
-    spece = specf.to(u.eV, equivalencies=u.spectral())
+    specfrq = np.logspace(14, 50, 100) * u.Hz
+    specen = specfrq.to(u.eV, equivalencies=u.spectral())
     dist = 1 * u.Mpc
 
     pds = [SYN1, SYN2, SYN3]
@@ -104,8 +106,8 @@ if __name__ == '__main__':
     font = {'family': 'serif', 'color': 'black',
             'weight': 'normal', 'size': 16.0}
     for pd, ls, cs, lb in zip(pds, ls, colors, labels):
-        sed = pd.sed(spece, dist)
-        ax.loglog(spece, sed, lw=2,
+        sed = pd.sed(specen, dist)
+        ax.loglog(specen, sed, lw=2,
                 color=cs, ls=ls, label=lb)
     ax.set_xlabel('Energy (eV)', fontsize=14)
     ax.set_ylabel(
