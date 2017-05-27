@@ -17,6 +17,7 @@ mpc2 = (m_p * c ** 2).cgs
 mpc2_unit = u.Unit(mpc2)
 e = e.gauss
 
+
 class PSynchrotron(Synchrotron):
     """Dummy Proton-Synchrotron Model
        Simplest modification of Naima e-synchrotron code.
@@ -25,7 +26,7 @@ class PSynchrotron(Synchrotron):
         (`arXiv:1006.1045 <http://arxiv.org/abs/1006.1045>`_).
     """
 
-    def __init__(self, particle_distribution, B = 10 * u.G, **kwargs):
+    def __init__(self, particle_distribution, B=10 * u.G, **kwargs):
         self.particle_distribution = particle_distribution
         self.B = B
         P = self.particle_distribution(1 * u.TeV)
@@ -36,7 +37,6 @@ class PSynchrotron(Synchrotron):
         self.nEpd = 300
         self.__dict__.update(**kwargs)
 
-
     @property
     def _energyarr(self):
         """Proton energy array
@@ -44,13 +44,12 @@ class PSynchrotron(Synchrotron):
         return np.logspace(np.log10(self.Epmin.to(u.eV).value),
                            np.log10(self.Epmax.to(u.eV).value),
                            self.nEpd * (np.log10(self.Epmax / self.Epmin)))
-        
+
     @property
     def _lorentzfacarr(self):
         """Lorentz factor of protons
         """
         return self._energyarr / mpc2.to(u.eV).value
-
 
     @property
     def _nproton(self):
@@ -76,9 +75,9 @@ class PSynchrotron(Synchrotron):
                  ** 2 * hbar.cgs.value * outspec.to('erg').value)
         CS1 = CS1_0 / CS1_1
 
-
         # Critical energy calculation
-        Ec = 3 * e.value * hbar.cgs.value * self.B.to('G').value * self._lorentzfacarr**2
+        Ec = 3 * e.value * hbar.cgs.value * \
+            self.B.to('G').value * self._lorentzfacarr**2
         Ec /= 2 * (m_p * c).cgs.value
 
         EgEc = outspec.to('erg').value / np.vstack(Ec)
@@ -93,12 +92,14 @@ class PSynchrotron(Synchrotron):
 if __name__ == '__main__':
 
     pdist1 = ECPL(4.3e33 / u.eV, 1e3 * u.GeV, 1.3, 8e5 * u.TeV)
-    pdist2 = EBPL(6.3e33 / u.eV, 8.5e3 * u.GeV, 8e4 * u.GeV, 1.35, 1.75, e_cutoff=9e5 * u.TeV)
-    pdist3 = PL(1.3e33 / u.eV, 1e3 * u.GeV, 1.3)    
+    pdist2 = EBPL(6.3e33 / u.eV, 8.5e3 * u.GeV, 8e4 *
+                  u.GeV, 1.35, 1.75, e_cutoff=9e5 * u.TeV)
+    pdist3 = PL(1.3e33 / u.eV, 1e3 * u.GeV, 1.3)
 
     SYN1 = PSynchrotron(pdist1, B=10 * u.G)
     SYN2 = PSynchrotron(pdist2, B=10 * u.G)
-    SYN3 = PSynchrotron(pdist3, B=10 * u.G, Epmin=1e13 * u.eV, Epmax=3.2e18 * u.eV)
+    SYN3 = PSynchrotron(pdist3, B=10 * u.G, Epmin=1e13 *
+                        u.eV, Epmax=3.2e18 * u.eV)
 
     specfrq = np.logspace(14, 50, 100) * u.Hz
     specen = specfrq.to(u.eV, equivalencies=u.spectral())
@@ -107,7 +108,7 @@ if __name__ == '__main__':
     pds = [SYN1, SYN2, SYN3]
     ls = ['-', '--', '-.']
     colors = ['royalblue', 'red', 'black']
-    labels = ['Exp.cutoff PWL','BrokenPL w/cutoff','PowerLaw']
+    labels = ['Exp.cutoff PWL', 'BrokenPL w/cutoff', 'PowerLaw']
 
     fig = plt.figure(figsize=(15, 15))
     ax = fig.add_subplot(1, 1, 1)
@@ -116,7 +117,7 @@ if __name__ == '__main__':
     for pd, ls, cs, lb in zip(pds, ls, colors, labels):
         sed = pd.sed(specen, dist)
         ax.loglog(specen, sed, lw=2,
-                color=cs, ls=ls, label=lb)
+                  color=cs, ls=ls, label=lb)
     ax.set_xlabel('Energy (eV)', fontsize=17)
     ax.set_ylabel(
         r'$E^{2}*{\rm d}N/{\rm d}E\,[erg\,cm^{-2}\,s^{-1}]$', fontsize=17)
