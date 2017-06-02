@@ -157,5 +157,5 @@ if __name__ == '__main__':
     ax.set_ylim(1e-60, 1e-10)
     ax.set_xlim(1e0, 1e21)
     plt.legend(loc='best', borderpad=2, fontsize=14)
-    plt.savefig('pp_second_leptons.eps')
+    plt.savefig('pp_second_leptons.png')
     plt.show()
