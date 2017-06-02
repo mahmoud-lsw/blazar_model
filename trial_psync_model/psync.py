@@ -125,5 +125,5 @@ if __name__ == '__main__':
     ax.set_ylim(1e-21, 1e-3)
     ax.set_xlim(1e0, 1e14)
     plt.legend(loc='best', borderpad=2, fontsize=14)
-    plt.savefig('psync_model_comparison.eps')
+    plt.savefig('psync_model_comparison.png')
     plt.show()
