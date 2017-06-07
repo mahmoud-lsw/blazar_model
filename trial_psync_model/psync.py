@@ -1,6 +1,7 @@
 from naima.models import Synchrotron
 from naima.models import ExponentialCutoffPowerLaw as ECPL
 from naima.models import ExponentialCutoffBrokenPowerLaw as EBPL
+from naima.models import BrokenPowerLaw as BPL
 from naima.models import PowerLaw as PL
 from astropy.constants import m_e, m_p, c, e, h, hbar
 from astropy import units as u
@@ -91,39 +92,46 @@ class PSynchrotron(Synchrotron):
 
 if __name__ == '__main__':
 
-    pdist1 = ECPL(4.3e33 / u.eV, 1e3 * u.GeV, 1.3, 8e5 * u.TeV)
-    pdist2 = EBPL(6.3e33 / u.eV, 8.5e3 * u.GeV, 8e4 *
-                  u.GeV, 1.35, 1.75, e_cutoff=9e5 * u.TeV)
-    pdist3 = PL(1.3e33 / u.eV, 1e3 * u.GeV, 1.3)
+    pdist1 = ECPL(4.3e37 / u.eV, 1e3 * u.GeV, 2.0, 8e5 * u.TeV)
+    pdist2 = EBPL(6.3e36 / u.eV, 8.5e3 * u.GeV, 8e4 *
+                  u.GeV, 2.05, 2.15, e_cutoff = 7.5e5 * u.TeV)
+    pdist3 = PL(1.3e36 / u.eV, 1e3 * u.GeV, 1.9)
+    pdist4 = BPL(1.8e36 / u.eV, 1e3 * u.GeV,
+                                5e4 * u.TeV, 2.0, 2.1)
 
-    SYN1 = PSynchrotron(pdist1, B=10 * u.G)
-    SYN2 = PSynchrotron(pdist2, B=10 * u.G)
-    SYN3 = PSynchrotron(pdist3, B=10 * u.G, Epmin=1e13 *
-                        u.eV, Epmax=3.2e18 * u.eV)
+    SYN1 = PSynchrotron(pdist1, B = 10 * u.G)
+    SYN2 = PSynchrotron(pdist2, B = 10 * u.G)
+    SYN3 = PSynchrotron(pdist3, B = 10 * u.G,
+                                Epmin = 1e13 * u.eV,
+                                Epmax = 3.2e18 * u.eV)
+    SYN4 = PSynchrotron(pdist4, B = 10 * u.G,
+                                Epmin = 1e12 * u.eV,
+                                Epmax = 2.8e18 * u.eV)
 
     specfrq = np.logspace(14, 50, 100) * u.Hz
-    specen = specfrq.to(u.eV, equivalencies=u.spectral())
+    specen = specfrq.to(u.eV, equivalencies = u.spectral())
     dist = 1 * u.Mpc
 
-    pds = [SYN1, SYN2, SYN3]
-    ls = ['-', '--', '-.']
-    colors = ['royalblue', 'red', 'black']
-    labels = ['Exp.cutoff PWL', 'BrokenPL w/cutoff', 'PowerLaw']
+    pds = [SYN1, SYN2, SYN3, SYN4]
+    ls = ['-', '--', '-.', '--']
+    colors = ['royalblue', 'red', 'black', 'green']
+    labels = ['Exp.cutoff PWL', 'BrokenPL w/cutoff', 'PowerLaw', 'Broken PWL']
 
-    fig = plt.figure(figsize=(15, 15))
+    fig = plt.figure(figsize = (15, 15))
     ax = fig.add_subplot(1, 1, 1)
     font = {'family': 'serif', 'color': 'black',
             'weight': 'normal', 'size': 16.0}
+
     for pd, ls, cs, lb in zip(pds, ls, colors, labels):
         sed = pd.sed(specen, dist)
-        ax.loglog(specen, sed, lw=2,
-                  color=cs, ls=ls, label=lb)
-    ax.set_xlabel('Energy (eV)', fontsize=17)
+        ax.loglog(specen, sed, lw = 3,
+                  color = cs, ls = ls, label = lb)
+    ax.set_xlabel('Energy (eV)', fontsize = 17)
     ax.set_ylabel(
-        r'$E^{2}*{\rm d}N/{\rm d}E\,[erg\,cm^{-2}\,s^{-1}]$', fontsize=17)
-    ax.set_title('Proton Synchrotron Model', fontsize=17)
+        r'$E^{2}*{\rm d}N/{\rm d}E\,[erg\,cm^{-2}\,s^{-1}]$', fontsize = 17)
+    ax.set_title('Proton Synchrotron Model', fontsize = 21)
     ax.set_ylim(1e-21, 1e-3)
     ax.set_xlim(1e0, 1e14)
-    plt.legend(loc='best', borderpad=2, fontsize=14)
+    plt.legend(loc='best', borderpad = 2, fontsize = 15)
     plt.savefig('psync_model_comparison.png')
     plt.show()
