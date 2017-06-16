@@ -34,6 +34,7 @@ class PionDecay_pgamma(object):
 
     def _softphoton_dist(self, e):
         """ Blackbody spectrum : No. of photons / energy / cm3
+        T fixed to 2.7 K in this case i.e. CMB radiation field
         Parameters
         ----------
         e : float
@@ -49,6 +50,20 @@ class PionDecay_pgamma(object):
         return (norm * (num / denom)).value
 
     def interp_tab1(self, eta):
+        """
+        Interpolate the values of s, delta, B for the
+        parametrics form of _phi_gamma.
+
+        Interpolation of TABLE-I Kelner2008
+        Parameters
+        ----------
+        eta : float
+              (4 * E_soft * E_proton) / mpc2
+        Returns
+        -------
+        s, delta, B : float
+                    Return these quantities as function of eta
+        """
 
         eta_arr = np.array([1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0,
                             3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 20.0,
@@ -87,6 +102,11 @@ class PionDecay_pgamma(object):
             E_gamma/E_p
         eta : float
             see eqn.10 Kelner2008 [TeV]
+
+        Returns
+        -------
+        phi_gamma : float
+                    Eqn27-29 Kelner2008
         """
         r = 0.146
         x_1 = eta + r**2
@@ -117,10 +137,12 @@ class PionDecay_pgamma(object):
 
     def _H_integrand(self, x, eta, Egamma):
         """
+        Parameters
+        -----------
         eta: (4 * e_soft * Ep) / (mp**2 * c**4)
         x: ''astropy.Units.Quantity' float
 
-        return: integrand of Eq70 Kelner2008
+        Returns: integrand of Eq70 Kelner2008
         """
         return ((1 / Egamma) *
                 self._particle_dist(Egamma / x) *
@@ -130,6 +152,17 @@ class PionDecay_pgamma(object):
     @nb.jit
     def _calc_specpg_hiE(self, Egamma):
         """
+        Calculation of differential photon spectra
+
+        Parameters
+        ----------
+        Egamma: 'astropy.units.Quantity' float
+                Output Photon energy
+
+        Returns
+        --------
+        spec_hi : float
+                  Differential photon flux
         """
         Egamma = Egamma.to('eV').value
         x_range = [0, 1]
@@ -142,6 +175,9 @@ class PionDecay_pgamma(object):
 
     @nb.jit
     def _spectrum(self, photon_energy):
+        """
+        Loop over the output photon energy array
+        """
 
         outspecene = _validate_ene(photon_energy)
         self.specpg = np.zeros(len(outspecene))
