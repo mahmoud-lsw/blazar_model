@@ -8,6 +8,7 @@ import numpy as np
 import numba as nb
 import matplotlib.pyplot as plt
 import timeit
+import cProfile
 
 __all__ = ['PionDecay_pgamma', ]
 
@@ -23,14 +24,14 @@ class PionDecay_pgamma(object):
 
     """
 
-    def __init__(self, pd, **kwargs):
-        """ Uses the delta function approcimation for Ep < Etrans (default 0.1 TeV)
+    def __init__(self, particle_dist, **kwargs):
+        """ Particle distribution of protons is the only parameter
         """
-        self.pd = pd
+        self.particle_dist = particle_dist
         self.__dict__.update(**kwargs)
 
     def _particle_dist(self, E):
-        return self.pd(E * u.eV).to('1/eV').value
+        return self.particle_dist(E * u.eV).to('1/eV').value
 
     def _softphoton_dist(self, e):
         """ Blackbody spectrum : No. of photons / energy / cm3
@@ -49,7 +50,7 @@ class PionDecay_pgamma(object):
 
         return (norm * (num / denom)).value
 
-    def interp_tab1(self, eta):
+    def lookup_tab1(self, eta):
         """
         Interpolate the values of s, delta, B for the
         parametrics form of _phi_gamma.
@@ -116,7 +117,7 @@ class PionDecay_pgamma(object):
         x_p = x_3 * (x_1 + x_2)
         x_n = x_3 * (x_1 - x_2)
 
-        s, delta, B = self.interp_tab1(eta / 0.313)
+        s, delta, B = self.lookup_tab1(eta / 0.313)
         power = 2.5 + 0.4 * np.log(eta / 0.313)
 
         if x > x_n and x < x_p:
@@ -131,7 +132,7 @@ class PionDecay_pgamma(object):
         elif x > x_p:
             return 0
 
-    mpc2 = (m_p * c ** 2).to('eV')
+    _mpc2 = (m_p * c ** 2).to('eV')
     _E = 3.0e20 * u.eV
     #Egamma = (0.5 * _E).value
 
@@ -146,11 +147,11 @@ class PionDecay_pgamma(object):
         """
         return ((1 / Egamma) *
                 self._particle_dist(Egamma / x) *
-                self._softphoton_dist((eta * self.mpc2**2 * x) / (4 * Egamma)) *
+                self._softphoton_dist((eta * self._mpc2**2 * x) / (4 * Egamma)) *
                 self._phi_gamma(eta, x))
 
     @nb.jit
-    def _calc_specpg_hiE(self, Egamma):
+    def _calc_spec_pgamma(self, Egamma):
         """
         Calculation of differential photon spectra
 
@@ -168,7 +169,7 @@ class PionDecay_pgamma(object):
         x_range = [0, 1]
         eta_range = [0.3443, 31.3]
         #opts = {'epsabs':0}
-        spec_hi = self.mpc2 * nquad(self._H_integrand, [x_range, eta_range],
+        spec_hi = self._mpc2 * nquad(self._H_integrand, [x_range, eta_range],
                                     args=[Egamma],)[0]
 
         return spec_hi.value
@@ -183,7 +184,7 @@ class PionDecay_pgamma(object):
         self.specpg = np.zeros(len(outspecene))
 
         for i, gamma in enumerate(outspecene):
-            self.specpg[i] = self._calc_specpg_hiE(gamma)
+            self.specpg[i] = self._calc_spec_pgamma(gamma)
             print("Executing {} out of 100 steps...\n dNdE={}".format(
                 i + 1, self.specpg[i]))
 
@@ -194,7 +195,7 @@ if __name__ == '__main__':
 
     start = timeit.default_timer()
     pdist1 = PL(4.3e8 / u.eV, 1e3 * u.GeV, 2.5)
-    pg1 = PionDecay_pgamma(pdist1, B=10 * u.G)
+    pg1 = PionDecay_pgamma(pdist1)
 
     gamma_arr = np.linspace(0.43e-2, 1, 100) * pg1._E
 
@@ -207,7 +208,7 @@ if __name__ == '__main__':
     plt.loglog(gamma_arr, gamma_arr * sed, label='Proton index=2.5',
                lw=2.2, ls='-', color='blue')
     plt.title(
-        'Gamma-ray spectra from Pion Decay (target : CMB (T=2.7 K))', fontsize=9)
+        'Gamma-ray spec. from Neutral Pion Decay (target : CMB (T=2.7 K))', fontsize=9)
     plt.xlabel('$Energy (eV)$')
     plt.ylabel(r'$E*{\rm d}N/{\rm d}E\,[cm^{-3}\,s^{-1}]$')
     plt.legend(loc='best')
