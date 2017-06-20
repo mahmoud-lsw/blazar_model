@@ -130,12 +130,12 @@ class PionDecay_leptons(PionDecayKelner06):
 
 if __name__ == '__main__':
 
-    pdist1 = ECPL(4.3e33 / u.eV, 1e3 * u.GeV, 1.3, 8e5 * u.TeV)
+    pdist1 = ECPL(4.3e33 / u.eV, 1e3 * u.GeV, 1.3, 7e2 * u.TeV)
     ppi1 = PionDecay_leptons(pdist1, B=10 * u.G)
 
     specfrq = np.logspace(14, 50, 100) * u.Hz
     specen = specfrq.to(u.eV, equivalencies=u.spectral())
-    dist = 1 * u.Mpc
+    dist = 1 * u.kpc
 
     pds = [ppi1, ]
     ls = ['-', ]
@@ -148,14 +148,16 @@ if __name__ == '__main__':
             'weight': 'normal', 'size': 16.0}
     for pd, ls, cs, lb in zip(pds, ls, colors, labels):
         sed = pd.sed(specen, dist)
-        ax.loglog(specen, sed, lw=2,
+        ax.loglog(specen, sed, lw=5,
                   color=cs, ls=ls, label=lb)
-    ax.set_xlabel('Energy (eV)', fontsize=17)
+    ax.set_xlabel('Energy (eV)', fontsize=20)
     ax.set_ylabel(
-        r'$E^{2}*{\rm d}N/{\rm d}E\,[erg\,cm^{-2}\,s^{-1}]$', fontsize=17)
-    ax.set_title('Secondary e+/e- spectra from p-p interactions', fontsize=17)
-    ax.set_ylim(1e-60, 1e-10)
-    ax.set_xlim(1e0, 1e21)
-    plt.legend(loc='best', borderpad=2, fontsize=14)
+        r'$E^{2}*{\rm d}N/{\rm d}E\,[erg\,cm^{-2}\,s^{-1}]$', fontsize=20)
+    ax.set_title('Secondary e+/e- spectra from p-p interactions', fontsize=24)
+    ax.set_ylim(1e-24, 8e-12)
+    ax.set_xlim(1e4, 1e18)
+    ax.xaxis.set_tick_params(labelsize=20)
+    ax.yaxis.set_tick_params(labelsize=20)
+    plt.legend(loc='best', borderpad=2, fontsize=19)
     plt.savefig('pp_second_leptons.png')
     plt.show()
