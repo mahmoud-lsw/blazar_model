@@ -124,14 +124,16 @@ if __name__ == '__main__':
 
     for pd, ls, cs, lb in zip(pds, ls, colors, labels):
         sed = pd.sed(specen, dist)
-        ax.loglog(specen, sed, lw = 3,
+        ax.loglog(specen, sed, lw = 5,
                   color = cs, ls = ls, label = lb)
-    ax.set_xlabel('Energy (eV)', fontsize = 17)
+    ax.set_xlabel('Energy (eV)', fontsize = 20)
     ax.set_ylabel(
-        r'$E^{2}*{\rm d}N/{\rm d}E\,[erg\,cm^{-2}\,s^{-1}]$', fontsize = 17)
-    ax.set_title('Proton Synchrotron Model', fontsize = 21)
+        r'$E^{2}*{\rm d}N/{\rm d}E\,[erg\,cm^{-2}\,s^{-1}]$', fontsize = 20)
+    ax.set_title('Proton Synchrotron Model', fontsize = 24)
     ax.set_ylim(1e-21, 1e-3)
     ax.set_xlim(1e0, 1e14)
-    plt.legend(loc='best', borderpad = 2, fontsize = 15)
+    ax.xaxis.set_tick_params(labelsize=20)
+    ax.yaxis.set_tick_params(labelsize=20)
+    plt.legend(loc='best', borderpad = 2, fontsize = 22)
     plt.savefig('psync_model_comparison.png')
     plt.show()
