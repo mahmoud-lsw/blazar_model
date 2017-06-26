@@ -50,7 +50,7 @@ class PionDecay_gamma(object):
 
         return (norm * (num / denom)).value
 
-    def lookup_tab1(self, eta, interp_file = "gamma_tab1_ka08.txt"):
+    def lookup_tab1(self, eta, interp_file = "./interpolation_tables/gamma_tab1_ka08.txt"):
         """
         Interpolate the values of s, delta, B for the
         parametrics form of _phi_gamma.
@@ -220,7 +220,7 @@ class PionDecay_positron(PionDecay_gamma):
     def __init__(self, particle_dist, **kwargs):
         super(PionDecay_positron, self).__init__(particle_dist, **kwargs)
 
-    def lookup_tab1(self, eta, interp_file = "positron_tab2_ka08.txt"):
+    def lookup_tab1(self, eta, interp_file = "./interpolation_tables/positron_tab2_ka08.txt"):
         return super(PionDecay_positron, self).lookup_tab1(eta, interp_file)
 
     def _x_pm(self, eta):
