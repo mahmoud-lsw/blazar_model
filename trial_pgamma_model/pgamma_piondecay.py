@@ -8,12 +8,12 @@ import numpy as np
 import numba as nb
 import matplotlib.pyplot as plt
 import timeit
-import cProfile
+import re
 
-__all__ = ['PionDecay_pgamma', ]
+__all__ = ['PionDecay_gamma', 'PionDecay_positron',]
 
 
-class PionDecay_pgamma(object):
+class PionDecay_gamma(object):
     """ Production spectra of secondary photons from
     neutral pion decay produced as secondaries from p-gamma interaction.
 
@@ -50,7 +50,7 @@ class PionDecay_pgamma(object):
 
         return (norm * (num / denom)).value
 
-    def lookup_tab1(self, eta):
+    def lookup_tab1(self, eta, interp_file = "gamma_tab1_ka08.txt"):
         """
         Interpolate the values of s, delta, B for the
         parametrics form of _phi_gamma.
@@ -60,39 +60,68 @@ class PionDecay_pgamma(object):
         ----------
         eta : float
               (4 * E_soft * E_proton) / mpc2
+
+        interp_file : string
+                      interpolation table according
+                      to Kelner2008
         Returns
         -------
         s, delta, B : float
                     Return these quantities as function of eta
         """
+        interp_table = open(interp_file, "r")
+        rows = interp_table.readlines()
+        eta_eta0 = []
+        s = []
+        delta = []
+        B = []
 
-        eta_arr = np.array([1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0,
-                            3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 20.0,
-                            30.0, 40.0, 100.0])
+        for row in rows:
+            entries = re.split(r"\s{1,}", row)
+            eta_eta0.append(float(entries[0]))
+            s.append(float(entries[1]))
+            delta.append(float(entries[2]))
+            B.append(float(entries[3]))
 
-        s_arr = np.array([0.0768, 0.106, 0.182, 0.201, 0.219, 0.216, 0.233, 0.233,
-                          0.248, 0.244, 0.188, 0.131, 0.120, 0.107, 0.102, 0.0932,
-                          0.0838, 0.0761, 0.107, 0.0928, 0.0772, 0.0479])
-
-        delta_arr = np.array([0.544, 0.540, 0.750, 0.791, 0.788, 0.831, 0.839, 0.825,
-                              0.805, 0.779, 1.23, 1.82, 2.05, 2.19, 2.23, 2.29, 2.37,
-                              2.43, 2.27, 2.33, 2.42, 2.59])
-
-        B_arr = np.array([2.86E-019, 2.24E-018, 5.61E-018, 1.02E-017, 1.6E-017, 2.23E-017,
-                          3.1E-017, 4.07E-017, 5.3E-017, 6.74E-017, 1.51E-016, 1.24E-016,
-                          1.37E-016, 1.62E-016, 1.71E-016, 1.78E-016, 1.84E-016, 1.93E-016,
-                          4.74E-016, 7.7E-016, 1.06E-015, 2.73E-015])
+        eta_arr = np.array(eta_eta0)
+        s_arr = np.array(s)
+        delta_arr = np.array(delta)
+        B_arr = np.array(B)
 
         s_int = interp1d(eta_arr, s_arr, kind='cubic',
                          bounds_error=False, fill_value="extrapolate")
-        delta_int = interp1d(eta_arr, delta_arr, kind='cubic')
-        B_int = interp1d(eta_arr, B_arr, kind='cubic')
+        delta_int = interp1d(eta_arr, delta_arr, kind='cubic',
+                             bounds_error=False, fill_value="extrapolate")
+        B_int = interp1d(eta_arr, B_arr, kind='cubic',
+                         bounds_error=False, fill_value="extrapolate")
 
         s_new = s_int(eta)
         delta_new = delta_int(eta)
         B_new = B_int(eta)
 
         return s_new, delta_new, B_new
+
+    def _x_plus_minus(self, eta):
+        """
+        Eqn. 19 Kelner2008
+
+        Parameters
+        ----------
+        eta : float
+
+        Returns
+        -------
+        xplus, xminus
+        According to Eqn 19
+        """
+        r = 0.146
+        x_1 = eta + r ** 2
+        x_2 = np.sqrt((eta - r ** 2 - 2 * r) * (eta - r ** 2 + 2 * r))
+        x_3 = 1 / (2 * (1 + eta))
+
+        x_plus = x_3 * (x_1 + x_2)
+        x_minus = x_3 * (x_1 - x_2)
+        return x_plus, x_minus
 
     def _phi_gamma(self, eta, x):
         """ Kelner2008 Eq27-29
@@ -109,13 +138,7 @@ class PionDecay_pgamma(object):
         phi_gamma : float
                     Eqn27-29 Kelner2008
         """
-        r = 0.146
-        x_1 = eta + r**2
-        x_2 = np.sqrt((eta - r**2 - 2 * r) * (eta - r**2 + 2 * r))
-        x_3 = 1 / (2 * (1 + eta))
-
-        x_p = x_3 * (x_1 + x_2)
-        x_n = x_3 * (x_1 - x_2)
+        x_p, x_n = self._x_plus_minus(eta)
 
         s, delta, B = self.lookup_tab1(eta / 0.313)
         power = 2.5 + 0.4 * np.log(eta / 0.313)
@@ -190,12 +213,76 @@ class PionDecay_pgamma(object):
 
         return self.specpg
 
+class PionDecay_positron(PionDecay_gamma):
+    """Production spectra of secondary positrons from
+    charged pion decay produced as secondaries from p-gamma interaction.
+    """
+    def __init__(self, particle_dist, **kwargs):
+        super(PionDecay_positron, self).__init__(particle_dist, **kwargs)
+
+    def lookup_tab1(self, eta, interp_file = "positron_tab2_ka08.txt"):
+        return super(PionDecay_positron, self).lookup_tab1(eta, interp_file)
+
+    def _x_pm(self, eta):
+        xplus, xminus = self._x_plus_minus(eta)
+        #x_plus, x_minus = xplus, xminus / 4.
+        return xplus, xminus / 4.
+
+    def power_psi(self, eta):
+        eta0 = 0.313
+        return 2.5 + 1.5 * np.log(eta / eta0)
+
+    def _phi_gamma(self, eta, x):
+        x_p, x_n = self._x_pm(eta)
+
+        s, delta, B = self.lookup_tab1(eta / 0.313)
+        power = self.power_psi(eta)
+
+        if x > x_n and x < x_p:
+            y = (x - x_n) / (x_p - x_n)
+            ln1 = np.exp(- s * (np.log(x / x_n)) ** delta)
+            ln2 = ln2 = np.log(2. / (1 + y**2))
+            return B * ln1 * ln2 ** power
+
+        elif x < x_n:
+            return B * (np.log(2) ** power)
+
+        elif x > x_p :
+            return 0
+        
+    def _H_integrand(self, x, eta, Eeplus):
+        return super(PionDecay_positron, self)._H_integrand(x, eta, Eeplus)
+
+    @nb.jit
+    def _calc_spec_pgamma(self, Eeplus):
+        Eeplus = Eeplus.to('eV').value
+        x_range = [0, 1]
+        eta_range = [0.3443, 31.3]
+        spec_hi = self._mpc2 * nquad(self._H_integrand, [x_range, eta_range],
+                                    args = [Eeplus],)[0]
+        return spec_hi.value
+
+    @nb.jit
+    def _spectrum(self, positron_energy):
+        """ The peak of the positron spectrum
+         shifts towards lower energies w.r.t
+         the peak of the photon spectrum.
+
+         Parameters
+         ----------
+         positron_energy : array_like
+                           same as in the photon E-array
+        """
+        return super(PionDecay_positron, self)._spectrum(positron_energy)
+
+
 
 if __name__ == '__main__':
 
     start = timeit.default_timer()
     pdist1 = PL(4.3e8 / u.eV, 1e3 * u.GeV, 2.5)
-    pg1 = PionDecay_pgamma(pdist1)
+    #pg1 = PionDecay_pgamma(pdist1)
+    pg1 = PionDecay_positron(pdist1)
 
     gamma_arr = np.linspace(0.43e-2, 1, 100) * pg1._E
 
@@ -207,10 +294,13 @@ if __name__ == '__main__':
             'weight': 'normal', 'size': 16.0}
     plt.loglog(gamma_arr, gamma_arr * sed, label='Proton index=2.5',
                lw=2.2, ls='-', color='blue')
+    #plt.title(
+    #    'Gamma-ray spec. from Neutral Pion Decay (target : CMB (T=2.7 K))', fontsize=9)
     plt.title(
-        'Gamma-ray spec. from Neutral Pion Decay (target : CMB (T=2.7 K))', fontsize=9)
+        'Positron spectrum from Charged Pion Decay (target : CMB (T=2.7 K))', fontsize=9)
     plt.xlabel('$Energy (eV)$')
     plt.ylabel(r'$E*{\rm d}N/{\rm d}E\,[cm^{-3}\,s^{-1}]$')
     plt.legend(loc='best')
-    plt.savefig('pgamma_photons.png')
+    #plt.savefig('pgamma_photons.png')
+    plt.savefig('pgamma_positrons.png')
     plt.show()
