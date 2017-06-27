@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import timeit
 import re
 
-__all__ = ['PionDecay_gamma', 'PionDecay_positron',]
+__all__ = ['PionDecay_gamma', 'PionDecay_positron', 'PionDecay_electron']
 
 
 class PionDecay_gamma(object):
@@ -276,6 +276,54 @@ class PionDecay_positron(PionDecay_gamma):
         return super(PionDecay_positron, self)._spectrum(positron_energy)
 
 
+class PionDecay_electron(PionDecay_positron):
+    """
+    Production spectra of secondary electrons from
+    charged pion decay produced as secondaries from p-gamma interaction.
+    """
+    def __init__(self, particle_dist, **kwargs):
+        super(PionDecay_electron, self).__init__(particle_dist, **kwargs)
+
+    def lookup_tab1(self, eta, interp_file = "./interpolation_tables/electron_tab3_ka08.txt"):
+        return super(PionDecay_electron, self).lookup_tab1(eta, interp_file)
+
+    def _x_pm(self, eta):
+        r = 0.146
+        x_1 = 2 * (1 + eta)
+        x_2 = eta - 2 * r
+        x_3 = np.sqrt(eta * (eta - 4 * r * (1 + r)))
+
+        x_plus = (x_2 + x_3) / x_1
+        x_minus = (x_2 - x_3) / x_1
+        return x_plus, x_minus
+
+    def heaviside(self, x):
+        return (np.sign(x) + 1) / 2.
+
+    def power_psi(self, eta):
+        rho = eta / 0.313
+        return 6 * (1 - np.exp(1.5 * (4 - rho))) * self.heaviside(rho - 4)
+
+    def _phi_gamma(self, eta, x):
+        return super(PionDecay_electron, self)._phi_gamma(eta, x)
+
+
+    def _H_integrand(self, x, eta, Eeminus):
+        return super(PionDecay_electron, self)._H_integrand(x, eta, Eeminus)
+
+    @nb.jit
+    def _calc_spec_pgamma(self, Eeminus):
+        Eeminus = Eeminus.to('eV').value
+        x_range = [0, 1]
+        eta_range = [0.66982, 31.3]
+        spec_hi = self._mpc2 * nquad(self._H_integrand, [x_range, eta_range],
+                                     args=[Eeminus], )[0]
+        return spec_hi.value
+
+    @nb.jit
+    def _spectrum(self, electron_energy):
+        return super(PionDecay_electron, self)._spectrum(electron_energy)
+
 
 if __name__ == '__main__':
 
@@ -283,6 +331,7 @@ if __name__ == '__main__':
     pdist1 = PL(4.3e8 / u.eV, 1e3 * u.GeV, 2.5)
     #pg1 = PionDecay_pgamma(pdist1)
     pg1 = PionDecay_positron(pdist1)
+    #pg1 = PionDecay_electron(pdist1)
 
     gamma_arr = np.linspace(0.43e-2, 1, 100) * pg1._E
 
@@ -298,9 +347,12 @@ if __name__ == '__main__':
     #    'Gamma-ray spec. from Neutral Pion Decay (target : CMB (T=2.7 K))', fontsize=9)
     plt.title(
         'Positron spectrum from Charged Pion Decay (target : CMB (T=2.7 K))', fontsize=9)
+    #plt.title(
+    #    'Electron spectrum from Charged Pion Decay (target : CMB (T=2.7 K))', fontsize=9)
     plt.xlabel('$Energy (eV)$')
     plt.ylabel(r'$E*{\rm d}N/{\rm d}E\,[cm^{-3}\,s^{-1}]$')
     plt.legend(loc='best')
-    #plt.savefig('pgamma_photons.png')
-    plt.savefig('pgamma_positrons.png')
+    #plt.savefig('./images/pgamma_photons.png')
+    plt.savefig('./images/pgamma_positrons.png')
+    #plt.savefig('./images/pgamma_electrons.png')
     plt.show()
