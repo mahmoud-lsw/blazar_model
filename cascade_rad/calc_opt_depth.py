@@ -86,7 +86,7 @@ class EMCascade(object):
         """
         s = e * E
         beta = sqrt(1 - (1. / s))
-        norm = 0.6 * _sigma_T * (1 - beta ** 2)
+        norm = 0.5 * _sigma_T * (1 - beta ** 2)
         t1 = (3 - beta ** 4) * log((1 + beta) / (1 - beta))
         t2 = 2 * beta * (2 - beta ** 2)
         return norm * (t1 - t2)
