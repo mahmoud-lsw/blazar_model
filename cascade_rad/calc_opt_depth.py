@@ -21,23 +21,20 @@ class EMCascade(object):
 
     'calc_opt_depth' : method to be called for optical depth calc.
 
-    CAUTION : the 'main' func is very slow. It uses scipy QUADPACK
-    and at the same time densely samples the energy.
-    Reducing the sample size of E, fastens up the calculation at
-    the cost of bad shape of the exp(tau) vs E curve.
+    NB: If a different target is choosen, the energy range should
+        also be shifted accordingly. The minima of the exp_tau vs E
+        curve shifts with change of target temperature.
 
     Issues :
     --------
-    1) Only 1 BB as soft photon field. To be updated.
-    1.a) The soft photon field works for CMB or thermal dust emission.
-          But probably not GENERAL enough! #TODO
-    2) To get a good shape of the exp(tau) vs Egamma,one has to
-       densely sample from Egamma! BUT...scipy QUADPACK extremely slow!!!
-       QUES: Direct use of trapezoidal rule probably faster?
+    2) To get a wider energy coverage, finer tuning of the energy
+       array is required to get a good shape of exp tau curve which
+       increases the computation time. Scipy 'QUADPACK' seems to be
+       quite slow. Any way to circumvent this problem?
     3) Determine a more realistic scale of extent of the soft
        photon field (size parameter)
     4) Is the s range correct (see function 'calc_opt_depth')?
-       s : CMS-frame Lorentz factor
+       s : CMS-frame Lorentz factor (at present 1 to 1e2)
     5) Leave the normalizaion of soft ph dist as free parameter?
        (at present fixed)
     """
@@ -109,12 +106,12 @@ class EMCascade(object):
 
 
 if __name__ == '__main__':
-    Tarr = [1000, 500] * u.K
+    Tarr = [700,] * u.K
     s = 0.1 * u.kpc
 
     Emin = 4e2 * u.GeV
     Emax = 2e2 * u.TeV
-    Earr = np.linspace(Emin, Emax, 5000)
+    Earr = np.linspace(Emin, Emax, 300)
 
     tau_dict = {}
 
@@ -132,7 +129,8 @@ if __name__ == '__main__':
     plt.xlabel(r'$E_\gamma$ [TeV]')
     plt.ylabel(r'$exp(- \tau_{\gamma\gamma})$')
     plt.legend(loc='best')
-    plt.savefig('./images/exptau_comparison.png')
+    plt.savefig('./images/exptau_vs_E.png')
+    plt.grid()
     plt.show()
 
 
