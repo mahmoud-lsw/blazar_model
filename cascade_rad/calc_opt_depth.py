@@ -19,6 +19,8 @@ class EMCascade(object):
     Soft photon field is only a BlackBody at present, whose
     temperature is an input parameter of EMC class.
 
+    'calc_opt_depth' : method to be called for optical depth calc.
+
     CAUTION : the 'main' func is very slow. It uses scipy QUADPACK
     and at the same time densely samples the energy.
     Reducing the sample size of E, fastens up the calculation at
@@ -39,20 +41,16 @@ class EMCascade(object):
     5) Leave the normalizaion of soft ph dist as free parameter?
        (at present fixed)
     """
-    def __init__(self, bb_temp, Egamma_min, Egamma_max, size):
+    def __init__(self, bb_temp, size):
         """
         Parameters
         ----------
         bb_temp: astropy.units.Quantity
             blackbody temperature in kelvin
-        Egamma_min, max : astropy Quantity
-            min, max gamma-ray energy
         size : astropy Quantity
             characteristic size of extent of soft photon field
         """
         self.T = bb_temp.to('K')
-        self.Egmin = Egamma_min
-        self.Egmax = Egamma_max
         self.size = size.to('cm').value
 
     def _softphoton_dist(self, e):
@@ -86,7 +84,7 @@ class EMCascade(object):
         """
         s = e * E
         beta = sqrt(1 - (1. / s))
-        norm = 0.5 * _sigma_T * (1 - beta ** 2)
+        norm = 0.19 * _sigma_T * (1 - beta ** 2)
         t1 = (3 - beta ** 4) * log((1 + beta) / (1 - beta))
         t2 = 2 * beta * (2 - beta ** 2)
         return norm * (t1 - t2)
@@ -109,31 +107,34 @@ class EMCascade(object):
         tau = self.size * quad(self.tau_integrand, 1., 1e2, args=E,)[0]
         return tau
 
-    def main_calc_opt_depth(self):
-        """main function to produce a plot"""
-        Egamma_arr = np.linspace(self.Egmin, self.Egmax, 7000)
-        exp_tau = []
-        for Egamma in Egamma_arr :
-            tau = self.calc_opt_depth(Egamma)
-            exp_tau.append(np.exp(-tau))
-
-        plt.semilogx(Egamma_arr, exp_tau, lw=2., label='Thermal dust (T = 50.7 K)')
-        plt.title('Optical Depth as a function of Gamma-ray Energy')
-        plt.xlabel(r'$E_\gamma$ [TeV]')
-        plt.ylabel(r'$exp(- \tau_{\gamma\gamma})$')
-        plt.legend(loc='best')
-        plt.savefig('./images/exptau_VS_Egam.png')
-        plt.show()
-
-
 
 if __name__ == '__main__':
-    T = 50.7 * u.K
-    Emin = 1e0 * u.TeV
-    Emax = 7e4 * u.TeV
-    s = 100 * u.kpc
-    emc = EMCascade(T, Emin, Emax, s)
-    emc.main_calc_opt_depth()
+    Tarr = [1000, 500] * u.K
+    s = 0.1 * u.kpc
+
+    Emin = 4e2 * u.GeV
+    Emax = 2e2 * u.TeV
+    Earr = np.linspace(Emin, Emax, 5000)
+
+    tau_dict = {}
+
+    for i, T in enumerate(Tarr) :
+        tau_dict[T] = []
+        emc = EMCascade(T, s)
+        for E in Earr:
+            tau = emc.calc_opt_depth(E)
+            tau_dict[T].append(np.exp(-tau))
+
+    for key, tau in tau_dict.items():
+        plt.semilogx(Earr, tau, lw=2, label='T = {} K'.format(int(key.value)))
+        plt.hold('True')
+    plt.title('Optical Depth as a function of Gamma-ray Energy')
+    plt.xlabel(r'$E_\gamma$ [TeV]')
+    plt.ylabel(r'$exp(- \tau_{\gamma\gamma})$')
+    plt.legend(loc='best')
+    plt.savefig('./images/exptau_comparison.png')
+    plt.show()
+
 
 
 
