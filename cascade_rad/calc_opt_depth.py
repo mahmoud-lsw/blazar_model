@@ -27,15 +27,15 @@ class EMCascade(object):
 
     Issues :
     --------
-    2) To get a wider energy coverage, finer tuning of the energy
+    1) To get a wider energy coverage, finer tuning of the energy
        array is required to get a good shape of exp tau curve which
        increases the computation time. Scipy 'QUADPACK' seems to be
        quite slow. Any way to circumvent this problem?
-    3) Determine a more realistic scale of extent of the soft
+    2) Determine a more realistic scale of extent of the soft
        photon field (size parameter)
-    4) Is the s range correct (see function 'calc_opt_depth')?
+    3) Is the s range correct (see function 'calc_opt_depth')?
        s : CMS-frame Lorentz factor (at present 1 to 1e2)
-    5) Leave the normalizaion of soft ph dist as free parameter?
+    4) Leave the normalizaion of soft ph dist as free parameter?
        (at present fixed)
     """
     def __init__(self, bb_temp, size):
