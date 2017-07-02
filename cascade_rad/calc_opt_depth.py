@@ -106,7 +106,7 @@ class EMCascade(object):
 
 
 if __name__ == '__main__':
-    Tarr = [700,] * u.K
+    Tarr = [500, 750, 1000] * u.K
     s = 0.1 * u.kpc
 
     Emin = 4e2 * u.GeV
@@ -121,16 +121,19 @@ if __name__ == '__main__':
         for E in Earr:
             tau = emc.calc_opt_depth(E)
             tau_dict[T].append(np.exp(-tau))
-
+    fig = plt.figure()
+    ax = fig.add_subplot(1,1,1)
+    xticks = Earr.value
+    ax.set_xticks(xticks, minor=True)
+    ax.grid(which='both', alpha=0.2)
     for key, tau in tau_dict.items():
-        plt.semilogx(Earr, tau, lw=2, label='T = {} K'.format(int(key.value)))
-        plt.hold('True')
+        ax.semilogx(Earr, tau, lw=2, label='T = {} K'.format(int(key.value)))
+        ax.hold('True')
     plt.title('Optical Depth as a function of Gamma-ray Energy')
     plt.xlabel(r'$E_\gamma$ [TeV]')
     plt.ylabel(r'$exp(- \tau_{\gamma\gamma})$')
     plt.legend(loc='best')
-    plt.savefig('./images/exptau_vs_E.png')
-    plt.grid()
+    plt.savefig('./images/exptau_comparison.png')
     plt.show()
 
 
