@@ -100,7 +100,6 @@ class EMCascade(object):
         return ((1 / E) * self.sigma(s / E, E) * self._softphoton_dist(s / E))
 
     def calc_opt_depth(self, E):
-        E = E.to('eV') / _mec2_u
         tau = self.size * quad(self.tau_integrand, 1., 1e2, args=E,)[0]
         return tau
 
@@ -119,6 +118,7 @@ if __name__ == '__main__':
         tau_dict[T] = []
         emc = EMCascade(T, s)
         for E in Earr:
+            E = E.to('eV') / _mec2_u
             tau = emc.calc_opt_depth(E)
             tau_dict[T].append(np.exp(-tau))
     fig = plt.figure()
