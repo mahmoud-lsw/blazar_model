@@ -52,6 +52,7 @@ class EMCascade(object):
 
     def _softphoton_dist(self, e):
         """ Planckian BB spectrum : No. of photons / energy / cm3
+        Arbitrarily chosen norm. Should norm be left as free param?
         Parameters
         ----------
         e : float
@@ -59,7 +60,7 @@ class EMCascade(object):
         """
         kT = ((k_B * self.T).to('eV').value) / _mec2
         hc = hbar.to('eV s') * c.cgs
-        norm = (_mec2_u ** 2) / ((hc ** 3) * (np.pi ** 2))
+        norm = 0.2 * (_mec2_u ** 2) / ((hc ** 3) * (np.pi ** 2))
         num = e ** 2
         denom = (np.exp(e / kT)) - 1
 
@@ -106,7 +107,7 @@ class EMCascade(object):
 
 if __name__ == '__main__':
     Tarr = [500, 750, 1000] * u.K
-    s = 0.1 * u.kpc
+    s = 1 * u.kpc
 
     Emin = 4e2 * u.GeV
     Emax = 2e2 * u.TeV
