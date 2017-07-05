@@ -7,7 +7,7 @@ import astropy.units as u
 from astropy.io import ascii
 import naima
 import argparse
-#Usage: python toymodel.py -z 0.047 -t 45. -d 1. -x data_table_xray.dat -v data_table_gray.dat -2.0
+#usage: python fitmodel.py -z 0.047 -t 45. -d 1. -x data_table_xray.dat -v data_table_gray.dat 1e16 1. 1e-3 2.5 2.e5
 
 __all__ = ['Fitmodel','fitter'] 
 
@@ -76,23 +76,19 @@ class Fitmodel:
         '''
     
         #free parameters for emission region
-        #R = int(pars[0]) * u.cm 
-        R = 1e16 * u.cm
-        #B = pars[1] * u.G
-        #B = 2*naima.estimate_B(soft_xray, vhe).to('G')
-        B = 1.0 * u.G
+        R = int(pars[0]) * u.cm 
+        B = pars[1] * u.G
         emission_region = dict(R = R.value, B = B.value, t_esc = 1.5)
 
         #free parameters for the particle spectral distribution
-        #norm = pars[0] * u.Unit('1/erg')
-        norm = 1e+0 * u.Unit('1/erg')
-        index = pars[0]
-        injected_spectrum = dict(norm = norm.value, alpha = index, t_inj = 1.5)
+        norm = pars[2] * u.Unit('1/erg')
+        index = pars[3]
+        injected_spectrum = dict(norm = norm.value, alpha = -index, t_inj = 1.5)
+        #distance = 1e-13*u.kpc
         distance = 2.0*u.Mpc
 
         #free parameters for the gamma grid
-        #gamma_max = pars[3]
-        gamma_max = 2e5
+        gamma_max = pars[4]
         gamma_grid = dict(gamma_min = 2., gamma_max = gamma_max, gamma_bins = 20)
 
         #Fixed parameters
@@ -110,8 +106,7 @@ class Fitmodel:
         #create the flux model to be given as input to run_sampler 
         if self.dat_type == 'i':
             energy = np.logspace(-7, 13, 25) * u.eV
-            #model_flux = (IC.flux(energy, distance) + SYN.flux(energy, distance))
-            model_flux = (IC.sed(energy, distance=distance) + SYN.sed(energy, distance=distance))
+            model_flux = (IC.flux(energy, distance) + SYN.flux(energy, distance))
         elif self.dat_type == 'o':
             beta=np.sqrt(1.-1./(self.theta**2))
             doppler = 1./(self.lorentz*(1.-beta*np.cos(self.theta)))
@@ -150,12 +145,13 @@ class Fitmodel:
         The ranges given in this scipt have to be made more compact of course! 
         '''
         if self.dat_type == 'i':
-           prior = naima.uniform_prior(pars[0], -2.5, -1.5) \
-                 #+naima.uniform_prior(pars[0], -np.inf, np.inf) \
-                 #+ naima.uniform_prior(pars[0], 1e14, 1e21) \
-                 #+ naima.uniform_prior(pars[1], 0, 500) \
-                 #+ naima.uniform_prior(pars[3], 2, 1e15)
-        
+           prior = naima.uniform_prior(pars[0], 1e14, 1e21) \
+                   + naima.uniform_prior(pars[1], 0, 500) \
+                   + naima.uniform_prior(pars[2], 0, np.inf) \
+                   + naima.uniform_prior(pars[3], 1, 5) \
+                   + naima.uniform_prior(pars[4], 2, 1e15)
+                   #+ naima.uniform_prior(pars[2], 0, np.inf) \
+
         elif self.dat_type == 'o':
             prior = naima.uniform_prior(pars[0], 1e14, 1e21) \
                   + naima.uniform_prior(pars[1], 0, 500) \
@@ -193,16 +189,18 @@ class Fitmodel:
   
         #An interactive window helps to adjust the starting point of sampling
         #before calling run_sampler. 
+        """
         imf = naima.InteractiveModelFitter(self.model_func, p0, 
-                                           e_range=[1e-7*u.eV , 1e13*u.eV], 
+                                           e_range=[1e-3*u.eV , 1e13*u.eV], 
                                            e_npoints=25, labels=labels)
-        #data = [xray_data,vhe_data]
-        #imf = naima.InteractiveModelFitter(self.model_func, p0, data=data, labels=labels)
+        """
+        data_table = [xray_data,vhe_data]
+        imf = naima.InteractiveModelFitter(self.model_func, p0, data=data_table, labels=labels)
         p0 = imf.pars
 
         #Run sampler. nwalkers > len(parameter space). 
         #Numbers for nwalkers, nburn, nrun are only preliminary here for fast run.
-        sampler, pos = naima.run_sampler(data_table=[xray_data,vhe_data],
+        sampler, pos = naima.run_sampler(data_table=data_table,
                        p0=p0,  
                        labels=labels,
                        model=self.model_func,
@@ -217,8 +215,11 @@ class Fitmodel:
         #save run to hdf5 file which can be accesed later by naima.read_run
         naima.save_run('data_fit_run', sampler)
         #Diagnostic plots
-        naima.save_diagnostic_plots('data_fit_plots', sampler, sed=True, blob_labels=['Spectrum'])
+        #naima.save_diagnostic_plots('data_fit_plots', sampler, sed=True, blob_labels=['Spectrum'])
         naima.save_results_table('data_fit_table', sampler)
+        #fig = naima.plot_fit(sampler, n_samples=50, e_range=[1e-3*u.eV , 1e13*u.eV], e_npoints=25)
+        fig = naima.plot_fit(sampler, n_samples=50, e_range=[1e-3*u.eV , 1e13*u.eV], e_npoints=25)
+        fig.savefig("TEST.png")
 
     def main(self):
         '''
@@ -230,10 +231,8 @@ class Fitmodel:
 
         #initial guess. 
         p_init = self.p0
-        #if self.dat_type == 'i':
-        #   labels = ['R(cm)','B(G)','norm','index', 'gamma_max']
         if self.dat_type == 'i':
-           labels = ['index']
+           labels = ['R(cm)','B(G)','norm','index', 'gamma_max']
         elif self.dat_type == 'o':
            labels = ['R(cm)','B(G)','norm','index', 'gamma_max', 'theta', 'delta']
         #NOTE: NAIMA can also be used to guess a starting value of magnetic field
