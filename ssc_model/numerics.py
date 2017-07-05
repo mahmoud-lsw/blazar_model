@@ -2,7 +2,7 @@ from __future__ import division
 from math import pi, sqrt, exp, log
 import numpy as np
 from scipy import special, integrate
-from constants import *
+from .constants import *
 import astropy.units as u
 import astropy.constants as const
 import naima
@@ -130,7 +130,7 @@ class numerics:
             # N^{i+1} --> N^{i} and restart
             N_e = N_e_tmp
             # update the time past injection
-            print 't after injection: ', time_past_injection/self.model.crossing_time, ' crossing time'
+            #print ('t after injection: ', time_past_injection/self.model.crossing_time, ' crossing time')
             time_past_injection += delta_t
 
         return N_e
