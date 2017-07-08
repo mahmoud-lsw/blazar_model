@@ -1,126 +1,123 @@
 import numpy as np
-from math import pi
-import matplotlib.pyplot as plt
 from ssc_model.model import model as mod
 from ssc_model.numerics import numerics
 import astropy.units as u
-from astropy.io import ascii
+from astropy.table import Table
 import naima
 import argparse
-#usage: python fitmodel.py -z 0.047 -t 45. -d 1. -x data_table_xray.dat -v data_table_gray.dat 1e16 1. 1e-3 2.5 2.e5
+# usage eg (for 'intrinsic = True'):
+#-----------------------------------
+# python fitmodel.py -z 0.047 -f data_table_gamma.dat -free 2.1 1e16 0.9 1.7e5
+#-f argument takes more than one files as well. Any number of data files
+#Order of the positional args (all free params) have to be maintained
+# 'python fitmodel.py -h' : shows the order of positional args
+#python testmodel.py -z 0.047 -f data_table_xray.dat data_table_gamma.dat -free 2.1 1e16 0.9 1.7e5
 
-__all__ = ['Fitmodel','fitter'] 
+__all__ = ['Fitmodel', 'fitter']
+
 
 class Fitmodel:
-    ''' DESCIPTION: Class to derive the best fit and uncertainty distribution of the free spectral parameters
-        through Markov Chain Monte Carlo sampling of their likelihood distribution.
- 
-        The number of free parameters (taken as command line input) are only 5 here for simplicity. 
-        Format for data file provided from command line : Astropy Table (the way Naima likes it)
- 
-        usage: fitmodel2.py [-h] [-z --REDSHIFT] [-t --THETA] [-d --LORENTZ]
-                    [-x [--XRAY-DATA]] [-v [--VHE-DATA]]
-                    FREE_PARAMS [FREE_PARAMS ...]
+    ''' DESCRIPTION: Class to derive the best fit and uncertainty distribution
+        of the free spectral parameters through Markov Chain Monte Carlo
+        sampling of their likelihood distribution.
+
         find the max. likelihood model to fit to data
-
-        positional arguments:
-        FREE_PARAMS       R(cm) B(G) norm index gamma_max
-
-        optional arguments:
-        -h, --help        show this help message and exit
-        -z --REDSHIFT
-        -t --THETA
-        -d --LORENTZ
-        -x [--XRAY-DATA]
-        -v [--VHE-DATA]
     '''
 
-    def __init__(self):
-        parser = argparse.ArgumentParser(description='find the max. likelihood model to fit to data')
-        parser.add_argument('-z', metavar='--REDSHIFT',type=float)
-        parser.add_argument('-t', metavar='--THETA',type=float)     #in degrees
-        parser.add_argument('-d', metavar='--LORENTZ',type=float)   #Bulk Lorentz factor
-        parser.add_argument('-x', metavar='--XRAY-DATA', nargs='?',type=str, default='data_table_xray.dat')
-        parser.add_argument('-v', metavar='--VHE-DATA', nargs='?',type=str, default='data_table_gray.dat')
-        parser.add_argument('free', metavar='FREE_PARAMS', nargs='+', type=float, help="R(cm) B(G) norm index gamma_max")    
-        args = parser.parse_args() 
-        self.xray = args.x
-        self.vhe = args.v
-        self.z = args.z
-        self.theta = args.t
-        self.lorentz = args.d
-        self.dat_type = 'i'     #Hard-coded DEFAULT='i'. 'i'=intrinsic data; 'o'=observed
-                                ##set self.dat_type='o' for observed data. Not done at present because
-                                #doppler boosting implementation needs further investigation.
-        self.p0 = args.free    
-        #When considering Doppler boosting 2 more free params (not done at present)
-        if self.dat_type == 'o':
-           self.p0.extend([args.t, args.d])                  
-        print('Provided x-ray astropy table = "{}" & gamma-ray astropy table = "{}"'.format(self.xray, self.vhe))
+    def __init__(self, intrinsic=True):
+        """
+        Parameters:
+        -----------
+        intrinsic : bool
+                    whether the given data files represent the intrinsic
+                    or the observed spectral points (bt default intrinsic)
+        """
+        parser = argparse.ArgumentParser(
+                    description='find the max. likelihood model to fit to data')
+        parser.add_argument('-z', metavar='--REDSHIFT', type=float)
+        parser.add_argument('-f', metavar='--DATA-FILES', type=str, nargs='+')
+        parser.add_argument('-free', metavar='--FREE_PARAMS', nargs='+',
+                                    type=float, help="index R(cm) B(G) "
+                                                     "gamma-max theta(deg) "
+                                                     "bulk-lorentz-fac...")
+        args = parser.parse_args()
 
-        
+        self.intrinsic = intrinsic
+        self.files = args.f
+        self.z = args.z
+        self.p0 = args.free
+        print('Provided {} astropy table(s): {}'.format(len(self.files), self.files))
+        self.e_npoints = 0
+        for file in self.files:
+            f = Table.read(file, format='ascii')
+            n = len(f['energy'])
+            assert len(f['energy']) == len(f['flux'])
+            self.e_npoints += n
+
+
     def model_func(self, pars, data):
         '''
-        The model function will be called during fitting to compare with obsrvations. 
+        The model function will be called during fitting to compare
+        with obsrvations.
 
         Parameters:
         ------------
         pars: list
               list of free parameters of the model
         data: astropy_table
-              observational data. Multiple tables can also be passed to 'data'
+              observational data. Multiple tables can also be
+              passed to 'data'
 
         Returns: 
         ---------
         Flux model to compare with observations.
         '''
-    
-        #free parameters for emission region
-        R = int(pars[0]) * u.cm 
-        B = pars[1] * u.G
-        emission_region = dict(R = R.value, B = B.value, t_esc = 1.5)
+        R = pars[1] * u.cm
+        B = pars[2] * u.G
+        emission_region = dict(R=R.value, B=B.value, t_esc=1.5)
 
-        #free parameters for the particle spectral distribution
-        norm = pars[2] * u.Unit('1/erg')
-        index = pars[3]
-        injected_spectrum = dict(norm = norm.value, alpha = -index, t_inj = 1.5)
-        #distance = 1e-13*u.kpc
-        distance = 2.0*u.Mpc
+        norm = 1.0e-4 * u.Unit('erg-1')
+        index = pars[0]
+        injected_spectrum = dict(norm=norm.value, alpha=-index, t_inj=1.5)
 
-        #free parameters for the gamma grid
-        gamma_max = pars[4]
-        gamma_grid = dict(gamma_min = 2., gamma_max = gamma_max, gamma_bins = 20)
+        distance = 8.0 * u.kpc
 
-        #Fixed parameters
-        time_grid = dict(time_min = 0., time_max = 3., time_bins = 50)
-      
-        #with the above parameter set, we now obtain a particle distibution from numerics class
+        gamma_max = pars[3]
+        gamma_grid = dict(gamma_min=2., gamma_max=gamma_max, gamma_bins=20)
+
+        time_grid = dict(time_min=0., time_max=3., time_bins=50)
+
+        # with the above parameter set, we now obtain a particle distibution
+        # from numerics class
         SSC = mod(time_grid, gamma_grid, emission_region, injected_spectrum)
         num = numerics(SSC)
         N_e = num.evolve()
 
-        #Obtain the Syn and IC instances by feeding in the particle distribution model
+        # Obtain the Syn and IC instances by feeding in the particle
+        # distribution model
         SYN = num.synchrotron(N_e)
         IC = num.inverse_compton(N_e)
 
-        #create the flux model to be given as input to run_sampler 
-        if self.dat_type == 'i':
-            energy = np.logspace(-7, 13, 25) * u.eV
-            model_flux = (IC.flux(energy, distance) + SYN.flux(energy, distance))
-        elif self.dat_type == 'o':
-            beta=np.sqrt(1.-1./(self.theta**2))
-            doppler = 1./(self.lorentz*(1.-beta*np.cos(self.theta)))
-            #energy = (np.logspace(-7, 13, 25) * doppler)* u.eV
-            energy = np.logspace(-7, 13, 25) * u.eV
-            model_flux = (IC.flux(energy, distance) + SYN.flux(energy, distance)) * (doppler**3.5)
+        # create the flux model to be given as input to run_sampler
+        if self.intrinsic:
+            energy = np.logspace(-7, 15, self.e_npoints) * u.eV
+            ic_flux = IC.flux(energy, distance)
+            syn_flux =  SYN.flux(energy, distance)
+            model_flux = ic_flux + syn_flux
+        else:
+            beta = np.sqrt(1. - 1. / (pars[5] ** 2))
+            doppler = (1 + self.z) * \
+                      (1. / (pars[5] * (1. - beta * np.cos(pars[4]))))
+            energy = (np.logspace(-7, 15, 28) * u.eV) * doppler
+            model_flux = (IC.flux(energy, distance) +
+                          SYN.flux(energy, distance)) * (doppler**3)
         return model_flux
-
 
     def ebl():
         '''
         This function is not used at present. 
         Only makes sense to use after implementing Doopler boosting.
-      
+
         Returns:
         --------
         opacity values which can be multiplied to a flux model
@@ -131,8 +128,11 @@ class Fitmodel:
 
     def prior_func(self, pars):
         '''
-        The prior function that encodes any previous knowledge we have about the parameter 
-        space constraints.
+        The prior function that encodes any previous knowledge
+        we have about the parameter space constraints.
+        Good choice of prior function is necessary for the fit
+        to converge correctly. Parameter space can be best
+        constrained from previous observations if any.
 
         Parameters:
         ------------
@@ -142,28 +142,24 @@ class Fitmodel:
         Returns:
         ---------
         Uniform prior (in this case) distribution of the parameters.
-        The ranges given in this scipt have to be made more compact of course! 
         '''
-        if self.dat_type == 'i':
-           prior = naima.uniform_prior(pars[0], 1e14, 1e21) \
-                   + naima.uniform_prior(pars[1], 0, 500) \
-                   + naima.uniform_prior(pars[2], 0, np.inf) \
-                   + naima.uniform_prior(pars[3], 1, 5) \
-                   + naima.uniform_prior(pars[4], 2, 1e15)
-                   #+ naima.uniform_prior(pars[2], 0, np.inf) \
+        #The order of the command line args is very imp
+        if self.intrinsic:
+            prior = naima.uniform_prior(pars[0], 1.8, 2.5) \
+                +naima.uniform_prior(pars[1], 1e14, 8e16) \
+                + naima.uniform_prior(pars[2], 0.9, 2.1) \
+                + naima.uniform_prior(pars[3], 1.5e5, 2.5e5) \
 
-        elif self.dat_type == 'o':
-            prior = naima.uniform_prior(pars[0], 1e14, 1e21) \
-                  + naima.uniform_prior(pars[1], 0, 500) \
-                  + naima.uniform_prior(pars[2], 0, np.inf) \
-                  + naima.uniform_prior(pars[3], 1, 5) \
-                  + naima.uniform_prior(pars[4], 2, 1e15) 
-              #    + naima.uniform_prior(pars[5], 0, 60.) \
-              #    + naima.uniform_prior(pars[6], 1, 100)          
+        else:
+            prior = naima.uniform_prior(pars[0], 1.8, 2.5) \
+                    + naima.uniform_prior(pars[1], 7e15, 8e15) \
+                    + naima.uniform_prior(pars[2], 0.9, 2.1) \
+                    + naima.uniform_prior(pars[3], 1.5e5, 2.5e5) \
+                    + naima.uniform_prior(pars[4], 3, 35) \
+                    + naima.uniform_prior(pars[5], 10, 80)
         return prior
 
-    
-    def fitter(self, p0, labels, xray_data, vhe_data):
+    def fitter(self, p0, labels, datatable):
         '''
         This is the actual fitting function.
 
@@ -173,77 +169,67 @@ class Fitmodel:
             free parameters; 1st guess (compact using InteractiveModelFitter)
         labels: list
                 names of the free parameters
-        xray_data: astropy Table
-                    x-ray data table for fitting
-        vhe_data: astropy Table
-                    gamma-ray data table for fitting
- 
-        After the fit a few files and plots are generated -
-         - SED with the maximum lilelihood model fit in black
-         - Posterior distribution of the free parameters
-         - An ascii table containing results of the fitted parameters,
-           goodness of fit (given by BIC in metadata), etc.
+        data_table: astropy Table
+                    list of data tables for fitting
+
+        Results of the fit (an astropy table with best param estimate and
+        uncertainties & the sed fit) are stored inside 'results_ssc_fit'
         '''
 
         print("Executing the fit...")
-  
-        #An interactive window helps to adjust the starting point of sampling
-        #before calling run_sampler. 
-        """
-        imf = naima.InteractiveModelFitter(self.model_func, p0, 
-                                           e_range=[1e-3*u.eV , 1e13*u.eV], 
-                                           e_npoints=25, labels=labels)
-        """
-        data_table = [xray_data,vhe_data]
-        imf = naima.InteractiveModelFitter(self.model_func, p0, data=data_table, labels=labels)
+
+        # An interactive window helps to adjust the starting point of sampling
+        # before calling run_sampler.
+        imf = naima.InteractiveModelFitter(self.model_func,
+                                           p0, sed=True,
+                                           e_range=[1e-3 * u.eV, 1e15 * u.eV],
+                                           e_npoints = self.e_npoints,
+                                           labels=labels)
+
         p0 = imf.pars
 
-        #Run sampler. nwalkers > len(parameter space). 
-        #Numbers for nwalkers, nburn, nrun are only preliminary here for fast run.
-        sampler, pos = naima.run_sampler(data_table=data_table,
-                       p0=p0,  
-                       labels=labels,
-                       model=self.model_func,
-                       prior=self.prior_func,
-                       nwalkers=16,
-                       nburn=8,
-                       nrun=6,
-                       threads=4,
-                       prefit=False,
-                       interactive=False)
+        # Run sampler. nwalkers > len(parameter space).
+        # Numbers for nwalkers, nburn, nrun are only preliminary here
+        # to achieve fast computation.
+        sampler, pos = naima.run_sampler(data_table=datatable,
+                                         p0=p0,
+                                         labels=labels,
+                                         model=self.model_func,
+                                         prior=self.prior_func,
+                                         nwalkers=20,
+                                         nburn=16,
+                                         nrun=16,
+                                         threads=4,
+                                         prefit=False,
+                                         interactive=False)
 
-        #save run to hdf5 file which can be accesed later by naima.read_run
-        naima.save_run('data_fit_run', sampler)
-        #Diagnostic plots
-        #naima.save_diagnostic_plots('data_fit_plots', sampler, sed=True, blob_labels=['Spectrum'])
-        naima.save_results_table('data_fit_table', sampler)
-        #fig = naima.plot_fit(sampler, n_samples=50, e_range=[1e-3*u.eV , 1e13*u.eV], e_npoints=25)
-        fig = naima.plot_fit(sampler, n_samples=50, e_range=[1e-3*u.eV , 1e13*u.eV], e_npoints=25)
-        fig.savefig("TEST.png")
+        naima.save_results_table('./results_ssc_fit/data_fit_table', sampler)
+        fig = naima.plot_fit(sampler, n_samples=50, e_range=[
+                             1e-3 * u.eV, 1e15 * u.eV], e_npoints=self.e_npoints)
+        #fig.savefig("./results_ssc_fit/likelihoodfitresult_sed.png")
+        fig.savefig("./results_ssc_fit/test_sed.png")
 
     def main(self):
         '''
         Main function
         '''
-        # Read data
-        xray = ascii.read(self.xray)
-        vhe = ascii.read(self.vhe)
+        readdata = []
+        for file in self.files:
+            f = Table.read(file, format='ascii')
+            readdata.append(f)
 
-        #initial guess. 
         p_init = self.p0
-        if self.dat_type == 'i':
-           labels = ['R(cm)','B(G)','norm','index', 'gamma_max']
-        elif self.dat_type == 'o':
-           labels = ['R(cm)','B(G)','norm','index', 'gamma_max', 'theta', 'delta']
-        #NOTE: NAIMA can also be used to guess a starting value of magnetic field
-        #from the ratio of X-ray to gamma-ray luminosity.
-        ##B0 = 2*naima.estimate_B(xray_data, vhe_data).to('G').value
 
-        #call the fitter function
-        self.fitter(p_init, labels, xray, vhe)
-        
+        if self.intrinsic:
+            labels = ['index','R (cm)', 'B (G)', 'gamma_max']
+        else:
+            labels = ['index','R (cm)', 'B (G)', 'gamma_max', \
+                      'theta(deg)', 'lorentz']
+
+        self.fitter(p_init, labels, readdata)
+
 
 if __name__ == '__main__':
-   
-    fitter_obj = Fitmodel()
+
+    fitter_obj = Fitmodel(intrinsic=True)
     fitter_obj.main()
