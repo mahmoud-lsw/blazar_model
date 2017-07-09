@@ -11,7 +11,7 @@ import argparse
 #-f argument takes more than one files as well. Any number of data files
 #Order of the positional args (all free params) have to be maintained
 # 'python fitmodel.py -h' : shows the order of positional args
-#python testmodel.py -z 0.047 -f data_table_xray.dat data_table_gamma.dat -free 2.1 1e16 0.9 1.7e5
+#python fitmodel.py -z 0.047 -f data_table_xray.dat data_table_gamma.dat -free 2.1 1e16 0.9 1.7e5
 
 __all__ = ['Fitmodel', 'fitter']
 
@@ -101,16 +101,16 @@ class Fitmodel:
         # create the flux model to be given as input to run_sampler
         if self.intrinsic:
             energy = np.logspace(-7, 15, self.e_npoints) * u.eV
-            ic_flux = IC.flux(energy, distance)
-            syn_flux =  SYN.flux(energy, distance)
+            ic_flux = IC.sed(energy, distance)
+            syn_flux =  SYN.sed(energy, distance)
             model_flux = ic_flux + syn_flux
         else:
             beta = np.sqrt(1. - 1. / (pars[5] ** 2))
             doppler = (1 + self.z) * \
                       (1. / (pars[5] * (1. - beta * np.cos(pars[4]))))
             energy = (np.logspace(-7, 15, 28) * u.eV) * doppler
-            model_flux = (IC.flux(energy, distance) +
-                          SYN.flux(energy, distance)) * (doppler**3)
+            model_flux = (IC.sed(energy, distance) +
+                          SYN.sed(energy, distance)) * (doppler**3)
         return model_flux
 
     def ebl():
@@ -201,6 +201,7 @@ class Fitmodel:
                                          nrun=16,
                                          threads=4,
                                          prefit=False,
+                                         data_sed=True,
                                          interactive=False)
 
         naima.save_results_table('./results_ssc_fit/data_fit_table', sampler)
