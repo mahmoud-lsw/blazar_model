@@ -108,12 +108,12 @@ class Fitmodel:
             beta = np.sqrt(1. - 1. / (pars[5] ** 2))
             doppler = (1 + self.z) * \
                       (1. / (pars[5] * (1. - beta * np.cos(pars[4]))))
-            energy = (np.logspace(-7, 15, 28) * u.eV) * doppler
+            energy = (np.logspace(-7, 15, self.e_npoints) * u.eV) * doppler
             model_flux = (IC.sed(energy, distance) +
                           SYN.sed(energy, distance)) * (doppler**3)
         return model_flux
 
-    def ebl():
+    def ebl(self):
         '''
         This function is not used at present. 
         Only makes sense to use after implementing Doopler boosting.
@@ -155,8 +155,8 @@ class Fitmodel:
                     + naima.uniform_prior(pars[1], 7e15, 8e15) \
                     + naima.uniform_prior(pars[2], 0.9, 2.1) \
                     + naima.uniform_prior(pars[3], 1.5e5, 2.5e5) \
-                    + naima.uniform_prior(pars[4], 3, 35) \
-                    + naima.uniform_prior(pars[5], 10, 80)
+                    + naima.uniform_prior(pars[4], 1, 45) \
+                    + naima.uniform_prior(pars[5], 1, 80)
         return prior
 
     def fitter(self, p0, labels, datatable):
