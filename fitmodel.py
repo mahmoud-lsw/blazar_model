@@ -11,7 +11,7 @@ import argparse
 #-f argument takes more than one files as well. Any number of data files
 #Order of the positional args (all free params) have to be maintained
 # 'python fitmodel.py -h' : shows the order of positional args
-#python fitmodel.py -z 0.047 -f data_table_xray.dat data_table_gamma.dat -free 2.1 1e16 0.9 1.7e5
+#python fitmodel.py -z 0.047 -f data_table_xray.dat data_table_gamma.dat -free 2.3 2e16 0.9 2e5
 
 __all__ = ['Fitmodel', 'fitter']
 
@@ -80,7 +80,7 @@ class Fitmodel:
         index = pars[0]
         injected_spectrum = dict(norm=norm.value, alpha=-index, t_inj=1.5)
 
-        distance = 8.0 * u.kpc
+        distance = 6.0 * u.kpc
 
         gamma_max = pars[3]
         gamma_grid = dict(gamma_min=2., gamma_max=gamma_max, gamma_bins=20)
@@ -207,8 +207,7 @@ class Fitmodel:
         naima.save_results_table('./results_ssc_fit/data_fit_table', sampler)
         fig = naima.plot_fit(sampler, n_samples=50, e_range=[
                              1e-3 * u.eV, 1e15 * u.eV], e_npoints=self.e_npoints)
-        #fig.savefig("./results_ssc_fit/likelihoodfitresult_sed.png")
-        fig.savefig("./results_ssc_fit/test_sed.png")
+        fig.savefig("./results_ssc_fit/likelihoodfitresult_sed.png")
 
     def main(self):
         '''
