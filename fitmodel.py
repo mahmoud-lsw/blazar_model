@@ -192,7 +192,7 @@ class Fitmodel:
 
         p0 = imf.pars
 
-        nwalkers = 100
+        nwalkers = 20
         nparams = len(p0)
         if nparams > nwalkers:
             raise RandomWalkError("The number of walkers should be atleast"
@@ -206,22 +206,22 @@ class Fitmodel:
                                          model=self.model_func,
                                          prior=self.prior_func,
                                          nwalkers=nwalkers,
-                                         nburn=50,
-                                         nrun=20,
+                                         nburn=16,
+                                         nrun=16,
                                          threads=4,
                                          prefit=False,
                                          data_sed=True,
                                          interactive=False)
 
-        naima.save_results_table('./results_ssc_fit/data_fit_table_delete', sampler)
+        naima.save_results_table('./results_ssc_fit/data_fit_table', sampler)
         fit_sed = naima.plot_fit(sampler, n_samples=50, e_range=[
-                             1e-3 * u.eV, 1e15 * u.eV], e_npoints=self.e_npoints)
-        fit_sed.savefig("./results_ssc_fit/likelihoodfitresult_sed_delete.png")
+                             1e-3 * u.eV, 1e15 * u.eV], e_npoopeints=self.e_npoints)
+        fit_sed.savefig("./results_ssc_fit/likelihoodfitresult_sed.png")
 
         labels = sampler.labels
         for index, name in enumerate(labels):
             chain = naima.plot_chain(sampler, p=index)
-            chain.savefig("./results_ssc_fit/plot_chain/{}_chain_delete.png".format(name))
+            chain.savefig("./results_ssc_fit/plot_chain/{}_chain.png".format(name))
 
     def main(self):
         '''
