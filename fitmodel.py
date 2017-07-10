@@ -215,7 +215,7 @@ class Fitmodel:
 
         naima.save_results_table('./results_ssc_fit/data_fit_table', sampler)
         fit_sed = naima.plot_fit(sampler, n_samples=50, e_range=[
-                             1e-3 * u.eV, 1e15 * u.eV], e_npoopeints=self.e_npoints)
+                             1e-3 * u.eV, 1e15 * u.eV], e_npoints=self.e_npoints)
         fit_sed.savefig("./results_ssc_fit/likelihoodfitresult_sed.png")
 
         labels = sampler.labels
