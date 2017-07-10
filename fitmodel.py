@@ -13,7 +13,11 @@ import argparse
 # 'python fitmodel.py -h' : shows the order of positional args
 #python fitmodel.py -z 0.047 -f data_table_xray.dat data_table_gamma.dat -free 2.3 2e16 0.9 2e5
 
-__all__ = ['Fitmodel', 'fitter']
+__all__ = ['Fitmodel', 'fitter', 'RandomWalkError']
+
+class RandomWalkError(Exception):
+    """Raised when number of parameters > nwalkers"""
+    pass
 
 
 class Fitmodel:
@@ -80,7 +84,7 @@ class Fitmodel:
         index = pars[0]
         injected_spectrum = dict(norm=norm.value, alpha=-index, t_inj=1.5)
 
-        distance = 6.0 * u.kpc
+        distance = 1.0 * u.kpc
 
         gamma_max = pars[3]
         gamma_grid = dict(gamma_min=2., gamma_max=gamma_max, gamma_bins=20)
@@ -188,7 +192,12 @@ class Fitmodel:
 
         p0 = imf.pars
 
-        # Run sampler. nwalkers > len(parameter space).
+        nwalkers = 100
+        nparams = len(p0)
+        if nparams > nwalkers:
+            raise RandomWalkError("The number of walkers should be atleast"
+                                  "greater than the number of parameters!!")
+
         # Numbers for nwalkers, nburn, nrun are only preliminary here
         # to achieve fast computation.
         sampler, pos = naima.run_sampler(data_table=datatable,
@@ -196,18 +205,23 @@ class Fitmodel:
                                          labels=labels,
                                          model=self.model_func,
                                          prior=self.prior_func,
-                                         nwalkers=20,
-                                         nburn=16,
-                                         nrun=16,
+                                         nwalkers=nwalkers,
+                                         nburn=50,
+                                         nrun=20,
                                          threads=4,
                                          prefit=False,
                                          data_sed=True,
                                          interactive=False)
 
-        naima.save_results_table('./results_ssc_fit/data_fit_table', sampler)
-        fig = naima.plot_fit(sampler, n_samples=50, e_range=[
+        naima.save_results_table('./results_ssc_fit/data_fit_table_delete', sampler)
+        fit_sed = naima.plot_fit(sampler, n_samples=50, e_range=[
                              1e-3 * u.eV, 1e15 * u.eV], e_npoints=self.e_npoints)
-        fig.savefig("./results_ssc_fit/likelihoodfitresult_sed.png")
+        fit_sed.savefig("./results_ssc_fit/likelihoodfitresult_sed_delete.png")
+
+        labels = sampler.labels
+        for index, name in enumerate(labels):
+            chain = naima.plot_chain(sampler, p=index)
+            chain.savefig("./results_ssc_fit/plot_chain/{}_chain_delete.png".format(name))
 
     def main(self):
         '''
@@ -221,9 +235,9 @@ class Fitmodel:
         p_init = self.p0
 
         if self.intrinsic:
-            labels = ['index','R (cm)', 'B (G)', 'gamma_max']
+            labels = ['index','R(cm)', 'B(G)', 'gamma_max']
         else:
-            labels = ['index','R (cm)', 'B (G)', 'gamma_max', \
+            labels = ['index','R(cm)', 'B(G)', 'gamma_max', \
                       'theta(deg)', 'lorentz']
 
         self.fitter(p_init, labels, readdata)
