@@ -1,7 +1,7 @@
 from __future__ import division
 from math import pi
 import numpy as np
-from constants import *
+from .constants import *
 
 class model:
     '''
