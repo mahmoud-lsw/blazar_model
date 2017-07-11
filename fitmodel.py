@@ -80,11 +80,11 @@ class Fitmodel:
         B = pars[2] * u.G
         emission_region = dict(R=R.value, B=B.value, t_esc=1.5)
 
-        norm = 3.0e-3 * u.Unit('erg-1')
+        norm = 7.0e-4 * u.Unit('erg-1')
         index = pars[0]
         injected_spectrum = dict(norm=norm.value, alpha=-index, t_inj=1.5)
 
-        distance = 1.0 * u.kpc
+        distance = 8.0 * u.kpc
 
         gamma_max = pars[3]
         gamma_grid = dict(gamma_min=2., gamma_max=gamma_max, gamma_bins=20)
@@ -149,9 +149,9 @@ class Fitmodel:
         '''
         #The order of the command line args is very imp
         if self.intrinsic:
-            prior = naima.uniform_prior(pars[0], 1.8, 2.5) \
-                +naima.uniform_prior(pars[1], 1e14, 8e16) \
-                + naima.uniform_prior(pars[2], 0.9, 2.1) \
+            prior = naima.uniform_prior(pars[0], 1.8, 2.45) \
+                +naima.uniform_prior(pars[1], 7e15, 8e17) \
+                + naima.uniform_prior(pars[2], 0.1, 2.1) \
                 + naima.uniform_prior(pars[3], 1.5e5, 2.5e5) \
 
         else:
