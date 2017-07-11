@@ -80,7 +80,7 @@ class Fitmodel:
         B = pars[2] * u.G
         emission_region = dict(R=R.value, B=B.value, t_esc=1.5)
 
-        norm = 1.0e-4 * u.Unit('erg-1')
+        norm = 3.0e-3 * u.Unit('erg-1')
         index = pars[0]
         injected_spectrum = dict(norm=norm.value, alpha=-index, t_inj=1.5)
 
@@ -206,9 +206,9 @@ class Fitmodel:
                                          model=self.model_func,
                                          prior=self.prior_func,
                                          nwalkers=nwalkers,
-                                         nburn=16,
-                                         nrun=16,
-                                         threads=4,
+                                         nburn=20,
+                                         nrun=20,
+                                         threads=2,
                                          prefit=False,
                                          data_sed=True,
                                          interactive=False)
@@ -222,6 +222,9 @@ class Fitmodel:
         for index, name in enumerate(labels):
             chain = naima.plot_chain(sampler, p=index)
             chain.savefig("./results_ssc_fit/plot_chain/{}_chain.png".format(name))
+
+        corner_plt = naima.plot_corner(sampler, show_ML=True)
+        corner_plt.savefig("./results_ssc_fit/corner_plots.png")
 
     def main(self):
         '''
