@@ -11,7 +11,7 @@ import argparse
 #-f argument takes more than one files as well. Any number of data files
 #Order of the positional args (all free params) have to be maintained
 # 'python fitmodel.py -h' : shows the order of positional args
-#python fitmodel.py -z 0.047 -f data_table_xray.dat data_table_gamma.dat -free 2.3 2e16 0.9 2e5
+#python fitmodel.py -z 0.047 -f data_table_xray.dat data_table_gamma.dat -free 2.3 7.1e15 0.6
 
 __all__ = ['Fitmodel', 'fitter', 'RandomWalkError']
 
@@ -86,7 +86,8 @@ class Fitmodel:
 
         distance = 8.0 * u.kpc
 
-        gamma_max = pars[3]
+        #gamma_max = pars[3]
+        gamma_max = 2.1e5
         gamma_grid = dict(gamma_min=2., gamma_max=gamma_max, gamma_bins=20)
 
         time_grid = dict(time_min=0., time_max=3., time_bins=50)
@@ -148,11 +149,18 @@ class Fitmodel:
         Uniform prior (in this case) distribution of the parameters.
         '''
         #The order of the command line args is very imp
-        if self.intrinsic:
+        '''
+                if self.intrinsic:
             prior = naima.uniform_prior(pars[0], 1.8, 2.45) \
                 +naima.uniform_prior(pars[1], 7e15, 8e17) \
                 + naima.uniform_prior(pars[2], 0.1, 2.1) \
                 + naima.uniform_prior(pars[3], 1.5e5, 2.5e5) \
+        '''
+        if self.intrinsic:
+            prior = naima.normal_prior(pars[0], 2.3, 0.4) \
+                    + naima.normal_prior(pars[1], 7e15, 2.2e7) \
+                    + naima.normal_prior(pars[2], 0.8, 0.09) \
+                    #+ naima.normal_prior(pars[3], 2.2e5, 0.9e2) \
 
         else:
             prior = naima.uniform_prior(pars[0], 1.8, 2.5) \
@@ -238,7 +246,8 @@ class Fitmodel:
         p_init = self.p0
 
         if self.intrinsic:
-            labels = ['index','R(cm)', 'B(G)', 'gamma_max']
+            #labels = ['index','R(cm)', 'B(G)', 'gamma_max']
+            labels = ['index', 'R(cm)', 'B(G)']
         else:
             labels = ['index','R(cm)', 'B(G)', 'gamma_max', \
                       'theta(deg)', 'lorentz']
