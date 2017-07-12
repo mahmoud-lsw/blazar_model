@@ -149,18 +149,18 @@ class Fitmodel:
         Uniform prior (in this case) distribution of the parameters.
         '''
         #The order of the command line args is very imp
-        '''
-                if self.intrinsic:
-            prior = naima.uniform_prior(pars[0], 1.8, 2.45) \
-                +naima.uniform_prior(pars[1], 7e15, 8e17) \
-                + naima.uniform_prior(pars[2], 0.1, 2.1) \
-                + naima.uniform_prior(pars[3], 1.5e5, 2.5e5) \
-        '''
+        
         if self.intrinsic:
-            prior = naima.normal_prior(pars[0], 2.3, 0.4) \
-                    + naima.normal_prior(pars[1], 7e15, 2.2e7) \
-                    + naima.normal_prior(pars[2], 0.8, 0.09) \
-                    #+ naima.normal_prior(pars[3], 2.2e5, 0.9e2) \
+            prior = naima.uniform_prior(pars[0], 1.8, 2.45) \
+                +naima.normal_prior(pars[1], 7e15, 8e7) \
+                + naima.uniform_prior(pars[2], 0.1, 2.1) \
+        
+        #if self.intrinsic:
+        #    prior = naima.normal_prior(pars[0], 2.3, 0.002) \
+        #            + naima.normal_prior(pars[1], 7e15, 6.2e7) \
+        #            + naima.uniform_prior(pars[2], 0.1, 2.1) \
+        #            #+ naima.normal_prior(pars[3], 2.2e5, 0.9e2) \
+        
 
         else:
             prior = naima.uniform_prior(pars[0], 1.8, 2.5) \
@@ -200,7 +200,7 @@ class Fitmodel:
 
         p0 = imf.pars
 
-        nwalkers = 20
+        nwalkers = 100
         nparams = len(p0)
         if nparams > nwalkers:
             raise RandomWalkError("The number of walkers should be atleast"
@@ -214,9 +214,9 @@ class Fitmodel:
                                          model=self.model_func,
                                          prior=self.prior_func,
                                          nwalkers=nwalkers,
-                                         nburn=20,
-                                         nrun=20,
-                                         threads=2,
+                                         nburn=50,
+                                         nrun=100,
+                                         threads=12,
                                          prefit=False,
                                          data_sed=True,
                                          interactive=False)
