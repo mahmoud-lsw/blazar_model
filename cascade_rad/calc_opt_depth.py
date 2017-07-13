@@ -1,7 +1,7 @@
 ########################################################################
 # Module for optical depth calculation
-# TauCalcPWL : Calculates optical depth for PowerLaw target photon field
-# TauCalcBB : Calculates optical depth for Blackbody target photon field
+# CalcOptDepthPWL : Calculates optical depth for PowerLaw target photon field
+# CalcOptDepthBB : Calculates optical depth for Blackbody target photon field
 
 # References :
 # 1) 'HE Radiation from BH' (authors : Dermer, C. D. et al.)
