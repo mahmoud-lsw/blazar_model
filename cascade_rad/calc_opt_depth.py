@@ -254,11 +254,11 @@ if __name__ == '__main__':
     for key, tau in tau_dict.items():
         ax.semilogx(Earr, tau, lw=2, label='T = {} K'.format(int(key.value)))
         ax.hold('True')
-    plt.title('Optical Depth as a function of Gamma-ray Energy')
+    plt.title('Optical Depth vs Gamma-ray Energy (target BlackBody)')
     plt.xlabel(r'$E_\gamma$ [TeV]')
     plt.ylabel(r'$exp(- \tau_{\gamma\gamma})$')
     plt.legend(loc='best')
-    fig1.savefig('./images/exptau_comparison.png')
+    fig1.savefig('./images/tau_BB_trials.png')
     plt.show()
 
     ################## Test for Class CalcOptDepthPWL #############
@@ -275,6 +275,7 @@ if __name__ == '__main__':
         plt.loglog(En, tau, lw=1.5, label='a=' + str(a) + ' , b=' + str(b))
 
     plt.legend(loc=2)
+    plt.title('Optical Depth vs Gamma-ray Energy (target PowerLaw)')
     plt.xlabel('E[eV]')
     plt.ylabel(r'$\tau_{\gamma \gamma}(E)$')
     plt.ylim([1e-2, 1e6])
