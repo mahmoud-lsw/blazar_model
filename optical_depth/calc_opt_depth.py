@@ -9,7 +9,7 @@
 
 # 13 July 2017
 # Authors : Cosimo Nigro (cosimo.nigro@desy.de),
-#           Wrijupan Bhayyacharyya (wrijupan.bhattacharyya@desy.de)
+#           Wrijupan Bhattacharyya (wrijupan.bhattacharyya@desy.de)
 #########################################################################
 from __future__ import division
 from astropy import units as u
@@ -35,7 +35,7 @@ __all__ = ['CalcOptDepthBB', 'CalcOptDepthPWL', ]
 
 class CalcOptDepthBB(object):
     """
-    Module to calculate optical depth as a func of gamma-ray energy
+    Module to calculate optical depth as a function of gamma-ray energy
     for BlackBody Soft Photon Field, whose temperature is an input
     parameter of TauCalcBB class.
 
@@ -64,7 +64,7 @@ class CalcOptDepthBB(object):
         Parameters
         ----------
         bb_temp: astropy.units.Quantity
-            blackbody temperature in kelvin
+            blackbody temperature in Kelvin
         size : astropy Quantity
             characteristic size of extent of soft photon field
         """
@@ -89,6 +89,7 @@ class CalcOptDepthBB(object):
 
     def sigma(self, e, E):
         """
+        Eq. (10.1) of Ref. 1)
         e = float
             soft photon energy (normalized)
         E = float
@@ -96,14 +97,14 @@ class CalcOptDepthBB(object):
         """
         s = e * E
         beta = sqrt(1 - (1. / s))
-        norm = 0.19 * _sigma_T * (1 - beta ** 2)
+        norm = 3./16 * _sigma_T * (1 - beta ** 2) # we use 3/16 sigma_T -> 1/2 pi r_e**2
         t1 = (3 - beta ** 4) * log((1 + beta) / (1 - beta))
         t2 = 2 * beta * (2 - beta ** 2)
         return norm * (t1 - t2)
 
     def tau_integrand(self, s, E):
         """
-        Integrand of Eqn-3.1 of https://arxiv.org/pdf/1706.07047v1.pdf
+        Integrand of Eq. (3.1) of Ref. 2)
         Parameter
         ---------
         s : float
@@ -159,7 +160,7 @@ class CalcOptDepthPWL(object):
 
     def plot_phi_bar(self):
         """
-        simple function for plotting phi_ba and checking it with Figure 10.2 of ref.
+        simple function for plotting phi_bar and checking it with Figure 10.2 of ref.
         """
         s_0 = np.linspace(1.1, 10, 1e2)
         _phi = np.array([self.phi_bar(s) for s in s_0])
