@@ -162,7 +162,7 @@ class CalcOptDepthPWL(object):
         simple function for plotting phi_ba and checking it with Figure 10.2 of ref.
         """
         s_0 = np.linspace(1.1, 10, 1e2)
-        _phi = np.array([phi_bar(s) for s in s_0])
+        _phi = np.array([self.phi_bar(s) for s in s_0])
 
         plt.plot(s_0, _phi / (s_0 - 1), lw=1.5)
         plt.xlabel(r'$s_0$', fontsize=14)
@@ -263,7 +263,7 @@ if __name__ == '__main__':
 
     ################## Test for Class CalcOptDepthPWL #############
     taupl = CalcOptDepthPWL()
-    taupl.plot_phi_bar
+    taupl.plot_phi_bar()
 
     En = np.logspace(9, 16, 50) * u.Unit('eV')
 
