@@ -27,7 +27,7 @@ class model:
         self.R = emission_region['R'] # in cm
         self.crossing_time = self.R/c
         self.B = emission_region['B'] # in Gauss
-        self.U_B = self.B/(8.*pi) # magnetic field density
+        self.U_B = self.B**2/(8.*pi) # magnetic field density
         self.t_esc = emission_region['t_esc']*self.crossing_time
 
         # time grid attributes definition
