@@ -14,7 +14,7 @@
 from __future__ import division
 from astropy import units as u
 from astropy.constants import m_e, k_B, sigma_T, c, hbar
-from scipy.integrate import quad
+from scipy.integrate import quad, quadrature
 import numpy as np
 from numpy import log, sqrt
 import matplotlib.pyplot as plt
@@ -116,7 +116,7 @@ class CalcOptDepthBB(object):
         return ((1 / E) * self.sigma(s / E, E) * self._softphoton_dist(s / E))
 
     def calc_opt_depth(self, E):
-        tau = self.size * quad(self.tau_integrand, 1., 1e2, args=E,)[0]
+        tau = self.size * quadrature(self.tau_integrand, 1., 1e2, args=(E,),vec_func=False)[0]
         return tau
 
 
@@ -234,7 +234,7 @@ if __name__ == '__main__':
     Tarr = [500, 1000] * u.K
     s = 1 * u.kpc
 
-    Emin = 4e2 * u.GeV
+    Emin = 2 * u.TeV
     Emax = 2e2 * u.TeV
     Earr = np.linspace(Emin, Emax, 300)
 
