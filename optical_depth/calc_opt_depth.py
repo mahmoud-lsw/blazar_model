@@ -14,10 +14,9 @@
 from __future__ import division
 from astropy import units as u
 from astropy.constants import m_e, k_B, sigma_T, c, hbar
-from scipy.integrate import quad, quadrature
+from scipy.integrate import quad
 import numpy as np
 from numpy import log, sqrt
-import matplotlib.pyplot as plt
 from math import log, sqrt, pi
 import astropy.constants as const
 from astropy.cosmology import FlatLambdaCDM
@@ -116,7 +115,7 @@ class CalcOptDepthBB(object):
         return ((1 / E) * self.sigma(s / E, E) * self._softphoton_dist(s / E))
 
     def calc_opt_depth(self, E):
-        tau = self.size * quadrature(self.tau_integrand, 1., 1e2, args=(E,),vec_func=False)[0]
+        tau = self.size * quad(self.tau_integrand, 1., 1e2, args=E,)[0]
         return tau
 
 
@@ -234,7 +233,7 @@ if __name__ == '__main__':
     Tarr = [500, 1000] * u.K
     s = 1 * u.kpc
 
-    Emin = 2 * u.TeV
+    Emin = 4e2 * u.GeV
     Emax = 2e2 * u.TeV
     Earr = np.linspace(Emin, Emax, 300)
 
@@ -261,6 +260,7 @@ if __name__ == '__main__':
     plt.legend(loc='best')
     fig1.savefig('./images/tau_BB_trials.png')
     plt.show()
+
 
     ################## Test for Class CalcOptDepthPWL #############
     taupl = CalcOptDepthPWL()
