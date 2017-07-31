@@ -51,7 +51,7 @@ class CalcOptDepthBB(object):
        photon field (size parameter)
     """
 
-    def __init__(self, bb_temp, size, norm=1.5e24 * u.Unit('cm3 eV')):
+    def __init__(self, size, bb_temp=2.7*u.K, norm=1.5e34 * u.Unit('cm-3 eV-3')):
         """
         Parameters
         ----------
@@ -64,7 +64,7 @@ class CalcOptDepthBB(object):
         """
         self.T = bb_temp.to('K')
         self.size = size.to('cm').value
-        self.norm = norm.to(u.Unit('cm3 eV'))
+        self.norm = norm.to(u.Unit('cm-3 eV-3'))
 
     def _softphoton_dist(self, e):
         """ Planckian BB spectrum : No. of photons / energy / cm3
@@ -218,10 +218,11 @@ class CalcOptDepthPWL(object):
         def integrand2(x): return self.phi_bar(x * w) / (x ** (4 - b))
         integral2 = quad(integrand2, max(1, 1 / w), x_b)[0]
 
-        return prefactor * (integral1 + integral2)
+        return float(prefactor * (integral1 + integral2))
 
 
 if __name__ == '__main__':
+
 
     ################## Test for Class CalcOptDepthBB #############
     Tarr = [1e3, 1e4, 1e5] * u.K
@@ -231,23 +232,26 @@ if __name__ == '__main__':
 
     Emin = 1e10 * u.eV
     Emax = 1e13 * u.eV
-    Earr = np.linspace(Emin, Emax, 700)
+    Earr = np.linspace(Emin, Emax, 300)
 
     tau_dict = {}
+    Tau = {}
 
     for T, norm in zip(Tarr, norm):
         tau_dict[T] = []
-        calcdepth = CalcOptDepthBB(T, s, norm)
+        Tau[T] = []
+        calcdepth = CalcOptDepthBB(s, T, norm)
         for E in Earr:
             E = E.to('eV') / _mec2_u
             tau = calcdepth.calc_opt_depth(E)
-            tau_dict[T].append(np.exp(-tau))
+            Tau[T].append(tau)
+            tau_dict[T].append((1 - np.exp(-tau))/tau)
+        print(Tau[T])
     fig1 = plt.figure()
     ax = fig1.add_subplot(1, 1, 1)
     xticks = Earr.value
     ax.set_xticks(xticks, minor=True)
     ax.grid(which='both', alpha=0.2)
-    ax.set_ylim([1e-3, 1])
     for key, tau in tau_dict.items():
         ax.loglog(Earr, tau, lw=2, label='$T = 10^{} K $'.format(int(np.log10(key.value))))
         ax.hold('True')
@@ -263,7 +267,7 @@ if __name__ == '__main__':
     taupl = CalcOptDepthPWL()
     taupl.plot_phi_bar()
 
-    En = np.logspace(9, 16, 50) * u.Unit('eV')
+    En = np.logspace(5, 12, 1000) * u.Unit('eV')
 
     fig2 = plt.figure()
 
