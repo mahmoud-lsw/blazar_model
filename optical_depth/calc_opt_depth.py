@@ -232,7 +232,7 @@ if __name__ == '__main__':
 
     Emin = 1e10 * u.eV
     Emax = 1e13 * u.eV
-    Earr = np.linspace(Emin, Emax, 300)
+    Earr = np.linspace(Emin, Emax, 700)
 
     tau_dict = {}
 
