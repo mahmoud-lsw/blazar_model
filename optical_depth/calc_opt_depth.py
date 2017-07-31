@@ -227,7 +227,7 @@ if __name__ == '__main__':
     ################## Test for Class CalcOptDepthBB #############
     Tarr = [1e3, 1e4, 1e5] * u.K
     # Norm choosen to reproduce Fig. 1 upper panel of ref. [3]
-    norm = [1.5e24, 1.5e21, 1.5e18] * u.Unit('cm3 eV')
+    norm = [1.5e24, 1.5e21, 1.5e18] * u.Unit('cm-3 eV-3')
     s = 1 * u.kpc
 
     Emin = 1e10 * u.eV
@@ -235,18 +235,14 @@ if __name__ == '__main__':
     Earr = np.linspace(Emin, Emax, 300)
 
     tau_dict = {}
-    Tau = {}
 
     for T, norm in zip(Tarr, norm):
         tau_dict[T] = []
-        Tau[T] = []
         calcdepth = CalcOptDepthBB(s, T, norm)
         for E in Earr:
             E = E.to('eV') / _mec2_u
             tau = calcdepth.calc_opt_depth(E)
-            Tau[T].append(tau)
             tau_dict[T].append((1 - np.exp(-tau))/tau)
-        print(Tau[T])
     fig1 = plt.figure()
     ax = fig1.add_subplot(1, 1, 1)
     xticks = Earr.value
@@ -267,7 +263,7 @@ if __name__ == '__main__':
     taupl = CalcOptDepthPWL()
     taupl.plot_phi_bar()
 
-    En = np.logspace(5, 12, 1000) * u.Unit('eV')
+    En = np.logspace(9, 16, 50) * u.Unit('eV')
 
     fig2 = plt.figure()
 
