@@ -56,6 +56,8 @@ class EMCascade(object):
         norm = 1.5e21 * u.Unit('erg-3 cm-3')
         norm = norm.to('eV-3 cm-3')
         return PionDecay_positron(self.pdist,T=1e4 * u.K,
+                                  norm=norm)._calc_spec_pgamma(Epair) + \
+               PionDecay_electron(self.pdist,T=1e4 * u.K,
                                   norm=norm)._calc_spec_pgamma(Epair)
 
     def Ne(self, Epair):
@@ -72,6 +74,8 @@ class EMCascade(object):
         norm = norm.to('eV-3 cm-3')
 
         return (PionDecay_positron(self.pdist,T=1e4 * u.K,
+                                   norm=norm)._spectrum(Epair) +
+                PionDecay_electron(self.pdist,T=1e4 * u.K,
                                    norm=norm)._spectrum(Epair)) * \
                (self.eta * (self.R / _c)).value
 
