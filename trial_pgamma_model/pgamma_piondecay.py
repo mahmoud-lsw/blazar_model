@@ -329,9 +329,9 @@ if __name__ == '__main__':
 
     start = timeit.default_timer()
     pdist1 = PL(4.3e8 / u.eV, 1e3 * u.GeV, 2.5)
-    pg1 = PionDecay_gamma(pdist1, T=1e4 * u.K, norm = 1.5e21 * u.Unit('erg-3 cm-3'))
+    #pg1 = PionDecay_gamma(pdist1, T=1e4 * u.K, norm = 1.5e21 * u.Unit('erg-3 cm-3'))
     #pg1 = PionDecay_positron(pdist1, T=1e4 * u.K, norm = 1.5e21 * u.Unit('erg-3 cm-3'))
-    #pg1 = PionDecay_electron(pdist1)
+    pg1 = PionDecay_electron(pdist1, T=1e4 * u.K, norm = 1.5e21 * u.Unit('erg-3 cm-3'))
 
     gamma_arr = np.linspace(0.43e-2, 1, 100) * pg1._E
 
@@ -343,16 +343,16 @@ if __name__ == '__main__':
             'weight': 'normal', 'size': 16.0}
     plt.loglog(gamma_arr, gamma_arr * sed, label='Proton index=2.5',
                lw=2.2, ls='-', color='blue')
-    plt.title(
-        'Gamma-ray spec. from Neutral Pion Decay (target : CMB ($T=10^4 K$))', fontsize=9)
+    #plt.title(
+    #    'Gamma-ray spec. from Neutral Pion Decay (target : CMB ($T=10^4 K$))', fontsize=9)
     #plt.title(
     #    'Positron spectrum from Charged Pion Decay (target : CMB ($T=10^4 K$))', fontsize=9)
-    #plt.title(
-    #    'Electron spectrum from Charged Pion Decay (target : CMB (T=2.7 K))', fontsize=9)
+    plt.title(
+        'Electron spectrum from Charged Pion Decay (target : CMB (T=2.7 K))', fontsize=9)
     plt.xlabel('$Energy (eV)$')
     plt.ylabel(r'$E*{\rm d}N/{\rm d}E\,[cm^{-3}\,s^{-1}]$')
     plt.legend(loc='best')
-    plt.savefig('./images/pgamma_photons.png')
+    #plt.savefig('./images/pgamma_photons.png')
     #plt.savefig('./images/pgamma_positrons.png')
-    #plt.savefig('./images/pgamma_electrons.png')
+    plt.savefig('./images/pgamma_electrons.png')
     plt.show()
