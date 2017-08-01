@@ -348,7 +348,7 @@ if __name__ == '__main__':
     #plt.title(
     #    'Positron spectrum from Charged Pion Decay (target : CMB ($T=10^4 K$))', fontsize=9)
     plt.title(
-        'Electron spectrum from Charged Pion Decay (target : CMB (T=2.7 K))', fontsize=9)
+        'Electron spectrum from Charged Pion Decay (target : CMB ($T=10^4 K$))', fontsize=9)
     plt.xlabel('$Energy (eV)$')
     plt.ylabel(r'$E*{\rm d}N/{\rm d}E\,[cm^{-3}\,s^{-1}]$')
     plt.legend(loc='best')
