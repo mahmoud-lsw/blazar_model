@@ -87,11 +87,11 @@ class PionDecay_gamma(object):
         delta_arr = np.array(delta)
         B_arr = np.array(B)
 
-        s_int = interp1d(eta_arr, s_arr, kind='cubic',
+        s_int = interp1d(eta_arr, s_arr, kind='linear',
                          bounds_error=False, fill_value="extrapolate")
-        delta_int = interp1d(eta_arr, delta_arr, kind='cubic',
+        delta_int = interp1d(eta_arr, delta_arr, kind='linear',
                              bounds_error=False, fill_value="extrapolate")
-        B_int = interp1d(eta_arr, B_arr, kind='cubic',
+        B_int = interp1d(eta_arr, B_arr, kind='linear',
                          bounds_error=False, fill_value="extrapolate")
 
         s_new = s_int(eta)
