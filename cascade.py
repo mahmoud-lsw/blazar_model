@@ -222,11 +222,12 @@ class EMCascade(object):
             denom = 6 * np.pi * _mec2_u
             return (-(num / denom) * (gamm ** 2)).value
 
+        gam, ene, gam_mid, del_gam = self.gamma_grid(gammin, gammax, gambins)
+        tesc = (self.eta * (self.R / _c)).value
+
         for i in range(N-1, -1, -1):
-            gam, ene, gam_mid, del_gam = self.gamma_grid(gammin, gammax, gambins)
             gamma_minus_half = gam_mid[i]
             gamma_plus_half = gamma_minus_half + del_gam[i]
-            tesc = (self.eta * (self.R / _c)).value
 
             V3 = cool_rate(gamma_plus_half) / del_gam[i]
             V2 = (1 / tesc) - (cool_rate(gamma_minus_half) / del_gam[i])
@@ -303,7 +304,7 @@ class EMCascade(object):
         ax1.set_title("Cascade spectrum")
         fig.tight_layout()
         plt.legend(loc='best')
-        plt.savefig("./cascade_sync_spec.png")
+        plt.savefig("./_test_cascade_sync_spec.png")
         plt.show()
 
 
