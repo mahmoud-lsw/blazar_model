@@ -33,8 +33,8 @@ SYN = num.synchrotron(N_e)
 IC = num.inverse_compton(N_e)
 
 stop = timeit.default_timer()
-print 'Computational time: '
-print stop - start, ' s'
+print ('Computational time: ')
+print (stop - start, ' s')
 
 # plotting section
 fig, axes = plt.subplots(2, 1)
@@ -54,8 +54,9 @@ axes[0].set_yscale('log')
 
 
 energy = np.logspace(-7, 15, 100) * u.eV
-axes[1].plot(energy, SYN.sed(energy, dist) + IC.sed(energy,dist), lw=3, color='royalblue', label='Synchrotron + Inverse Compton')
-axes[1].set_xlabel(r'$E\,[eV]$')
+freq = energy.to('Hz', equivalencies=u.spectral())
+axes[1].plot(freq, SYN.sed(energy, dist) + IC.sed(energy,dist), lw=3, color='royalblue', label='Synchrotron + Inverse Compton')
+axes[1].set_xlabel(r'$Frequency\,[Hz]$')
 axes[1].set_ylabel(r'$E^{2} \times {\rm d}F/{\rm d}E\,[erg\,cm^{-2}\,s^{-1}]$')
 axes[1].set_ylim(1e-25, 1e-12)
 axes[1].set_xscale('log')

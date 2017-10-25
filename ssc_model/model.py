@@ -51,7 +51,7 @@ class model:
         # gamma_grid will be the grid with elements from \gamma_{0} to \gamma_{N}
         self.gamma_grid = self.gamma_grid_ext[1:-1]
         # energy grid for use in calculating the synchrotron emission
-        self.energy_grid = self.gamma_grid*E_rest
+        self.energy_grid = self.gamma_grid*E_rest.value
 
         # let's create an array for the density of radiation
         self.U_rad = np.zeros(len(self.gamma_grid), float)

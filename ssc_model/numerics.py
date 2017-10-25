@@ -66,9 +66,10 @@ class numerics:
     def synchrotron(self, N_e):
         # we plug now the obtained electron distribution in naima TableModel
         # remultiply by Volume and maximum time of evolution to get N_e differential in Energy
-        N_e_differential = N_e * 4/3*pi*self.model.R**3 * self.model.time_max
+        #N_e_differential = N_e * 4/3*pi*self.model.R**3 * self.model.time_max
+        N_e_differential = (N_e * 4 / 3 * pi * self.model.R ** 3) / E_rest
         electron_density = naima.models.TableModel( self.model.energy_grid * u.eV,
-                                                    N_e_differential * u.Unit('1/erg'),
+                                                    N_e_differential,
                                                     amplitude = 1)
 
         SYN = naima.models.Synchrotron(electron_density, B = self.model.B * u.G)
@@ -78,9 +79,10 @@ class numerics:
 
     def inverse_compton(self, N_e):
 
-        N_e_differential = N_e * 4/3*pi*self.model.R**3 * self.model.time_max
+        #N_e_differential = N_e * 4/3*pi*self.model.R**3 * self.model.time_max
+        N_e_differential = (N_e * 4 / 3 * pi * self.model.R ** 3) / E_rest
         electron_density = naima.models.TableModel( self.model.energy_grid * u.eV,
-                                                    N_e_differential * u.Unit('1/erg'),
+                                                    N_e_differential,
                                                     amplitude = 1)
 
         # Define energy array for synchrotron seed photon field and compute
@@ -106,7 +108,8 @@ class numerics:
         Options only_synchrotron_cooling is for test
         '''
         # injected spectrum
-        N_e = self.model.N_e_inj
+        #N_e = self.model.N_e_inj
+        N_e = np.zeros(len(self.model.gamma_grid))
         # injecton term, to be added each delta_t up to the maximum injection time
         # specified by model.inj_time
         Q_e = self.model.powerlaw_injection
