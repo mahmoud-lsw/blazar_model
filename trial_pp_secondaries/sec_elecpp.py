@@ -130,17 +130,17 @@ class PionDecay_leptons(PionDecayKelner06):
 
 if __name__ == '__main__':
 
-    pdist1 = ECPL(4.3e33 / u.eV, 1e3 * u.GeV, 1.3, 7e2 * u.TeV)
+    pdist1 = ECPL(2.3e25 / u.eV, 1e3 * u.TeV, 2.0, 7e2 * u.TeV)
     ppi1 = PionDecay_leptons(pdist1, B=10 * u.G)
+    ppi2 = PionDecayKelner06(pdist1)
 
-    specfrq = np.logspace(14, 50, 100) * u.Hz
-    specen = specfrq.to(u.eV, equivalencies=u.spectral())
+    specen = np.logspace(-5, 3, 1e2) * u.TeV
     dist = 1 * u.kpc
 
-    pds = [ppi1, ]
-    ls = ['-', ]
-    colors = ['royalblue', ]
-    labels = ['Exp.cutoff PWL', ]
+    pds = [ppi1, ppi2]
+    ls = ['-', '--']
+    colors = ['royalblue', 'red']
+    labels = ['$e^{+}/e^{-}$', '$\gamma$-rays']
 
     fig = plt.figure(figsize=(15, 15))
     ax = fig.add_subplot(1, 1, 1)
@@ -150,14 +150,14 @@ if __name__ == '__main__':
         sed = pd.sed(specen, dist)
         ax.loglog(specen, sed, lw=5,
                   color=cs, ls=ls, label=lb)
-    ax.set_xlabel('Energy (eV)', fontsize=20)
+        ax.hold('True')
+    ax.set_xlabel('Energy (TeV)', fontsize=20)
     ax.set_ylabel(
-        r'$E^{2}*{\rm d}N/{\rm d}E\,[erg\,cm^{-2}\,s^{-1}]$', fontsize=20)
-    ax.set_title('Secondary e+/e- spectra from p-p interactions', fontsize=24)
-    ax.set_ylim(1e-24, 8e-12)
-    ax.set_xlim(1e4, 1e18)
+        r'$E^{2}\times{\rm d}N/{\rm d}E\,[erg\,cm^{-2}\,s^{-1}]$', fontsize=20)
+    ax.set_title('FIG: 12b, Kelner & Aharonian (2006)', fontsize=24)
     ax.xaxis.set_tick_params(labelsize=20)
     ax.yaxis.set_tick_params(labelsize=20)
+    ax.set_ylim(1e-19, 1e-16)
     plt.legend(loc='best', borderpad=2, fontsize=19)
-    plt.savefig('pp_second_leptons.png')
+    plt.savefig('fig12aK&A.png')
     plt.show()

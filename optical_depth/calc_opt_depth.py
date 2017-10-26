@@ -6,6 +6,7 @@
 # References :
 # 1) 'HE Radiation from BH' (authors : Dermer, C. D. et al.)
 # 2) 'https://arxiv.org/pdf/1706.07047v1.pdf'
+# 3) 'http://onlinelibrary.wiley.com/doi/10.1111/j.1365-2966.2008.13315.x/full'
 
 # 13 July 2017
 # Authors : Cosimo Nigro (cosimo.nigro@desy.de),
@@ -17,7 +18,6 @@ from astropy.constants import m_e, k_B, sigma_T, c, hbar
 from scipy.integrate import quad
 import numpy as np
 from numpy import log, sqrt
-import matplotlib.pyplot as plt
 from math import log, sqrt, pi
 import astropy.constants as const
 from astropy.cosmology import FlatLambdaCDM
@@ -41,10 +41,6 @@ class CalcOptDepthBB(object):
 
     'calc_opt_depth' : method to be called for optical depth calc.
 
-    NB: If a different target is choosen, the energy range should
-        also be shifted accordingly. The minima of the exp_tau vs E
-        curve shifts with change of target temperature.
-
     Issues :
     --------
     1) To get a wider energy coverage, finer tuning of the energy
@@ -53,13 +49,9 @@ class CalcOptDepthBB(object):
        quite slow. Any way to circumvent this problem?
     2) Determine a more realistic scale of extent of the soft
        photon field (size parameter)
-    3) Is the s range correct (see function 'calc_opt_depth')?
-       s : CMS-frame Lorentz factor (at present 1 to 1e2)
-    4) Leave the normalizaion of soft ph dist as free parameter?
-       (at present fixed)
     """
 
-    def __init__(self, bb_temp, size):
+    def __init__(self, size, bb_temp=2.7*u.K, norm=1.5e34 * u.Unit('cm-3 eV-3')):
         """
         Parameters
         ----------
@@ -67,9 +59,12 @@ class CalcOptDepthBB(object):
             blackbody temperature in Kelvin
         size : astropy Quantity
             characteristic size of extent of soft photon field
+        norm : astropy Quantity
+             normalization of soft photon field
         """
         self.T = bb_temp.to('K')
         self.size = size.to('cm').value
+        self.norm = norm.to(u.Unit('cm-3 eV-3'))
 
     def _softphoton_dist(self, e):
         """ Planckian BB spectrum : No. of photons / energy / cm3
@@ -80,12 +75,10 @@ class CalcOptDepthBB(object):
             energy of photon (normalized by mec2)
         """
         kT = ((k_B * self.T).to('eV').value) / _mec2
-        hc = hbar.to('eV s') * c.cgs
-        norm = 0.2 * (_mec2_u ** 2) / ((hc ** 3) * (np.pi ** 2))
         num = e ** 2
         denom = (np.exp(e / kT)) - 1
 
-        return (norm * (num / denom)).value
+        return (self.norm * (num / denom)).value
 
     def sigma(self, e, E):
         """
@@ -225,42 +218,46 @@ class CalcOptDepthPWL(object):
         def integrand2(x): return self.phi_bar(x * w) / (x ** (4 - b))
         integral2 = quad(integrand2, max(1, 1 / w), x_b)[0]
 
-        return prefactor * (integral1 + integral2)
+        return float(prefactor * (integral1 + integral2))
 
 
 if __name__ == '__main__':
 
+
     ################## Test for Class CalcOptDepthBB #############
-    Tarr = [500, 1000] * u.K
+    Tarr = [1e3, 1e4, 1e5] * u.K
+    # Norm choosen to reproduce Fig. 1 upper panel of ref. [3]
+    norm = [1.5e24, 1.5e21, 1.5e18] * u.Unit('cm-3 eV-3')
     s = 1 * u.kpc
 
-    Emin = 4e2 * u.GeV
-    Emax = 2e2 * u.TeV
-    Earr = np.linspace(Emin, Emax, 300)
+    Emin = 1e10 * u.eV
+    Emax = 1e13 * u.eV
+    Earr = np.linspace(Emin, Emax, 700)
 
     tau_dict = {}
 
-    for i, T in enumerate(Tarr):
+    for T, norm in zip(Tarr, norm):
         tau_dict[T] = []
-        calcdepth = CalcOptDepthBB(T, s)
+        calcdepth = CalcOptDepthBB(s, T, norm)
         for E in Earr:
             E = E.to('eV') / _mec2_u
             tau = calcdepth.calc_opt_depth(E)
-            tau_dict[T].append(np.exp(-tau))
+            tau_dict[T].append((1 - np.exp(-tau))/tau)
     fig1 = plt.figure()
     ax = fig1.add_subplot(1, 1, 1)
     xticks = Earr.value
     ax.set_xticks(xticks, minor=True)
     ax.grid(which='both', alpha=0.2)
     for key, tau in tau_dict.items():
-        ax.semilogx(Earr, tau, lw=2, label='T = {} K'.format(int(key.value)))
+        ax.loglog(Earr, tau, lw=2, label='$T = 10^{} K $'.format(int(np.log10(key.value))))
         ax.hold('True')
-    plt.title('Optical Depth vs Gamma-ray Energy (target BlackBody)')
-    plt.xlabel(r'$E_\gamma$ [TeV]')
+    plt.title('Fig. 1 upper panel : Aharonian et al. 2008 (Ref. [3])')
+    plt.xlabel(r'$E_\gamma$ [eV]')
     plt.ylabel(r'$exp(- \tau_{\gamma\gamma})$')
     plt.legend(loc='best')
     fig1.savefig('./images/tau_BB_trials.png')
     plt.show()
+
 
     ################## Test for Class CalcOptDepthPWL #############
     taupl = CalcOptDepthPWL()

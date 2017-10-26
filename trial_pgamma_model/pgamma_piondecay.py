@@ -24,10 +24,12 @@ class PionDecay_gamma(object):
 
     """
 
-    def __init__(self, particle_dist, **kwargs):
+    def __init__(self, particle_dist, T=1e4 *u.K, norm=1.5e21*u.Unit('eV-3 cm-3'), **kwargs):
         """ Particle distribution of protons is the only parameter
         """
         self.particle_dist = particle_dist
+        self.T = T.to('K')
+        self.norm = norm.to(u.Unit('eV-3 cm-3'))
         self.__dict__.update(**kwargs)
 
     def _particle_dist(self, E):
@@ -41,14 +43,11 @@ class PionDecay_gamma(object):
         e : float
             energy of photon (in eV)
         """
-        T = 2.7 * u.K
-        kT = (k_B * T).to('eV')
-        hc = hbar.to('eV s') * c.cgs
-        norm = 1 / ((hc ** 3) * (np.pi ** 2))
+        kT = (k_B * self.T).to('eV')
         num = (e * u.eV) ** 2
         denom = (np.exp((e / kT).value)) - 1
 
-        return (norm * (num / denom)).value
+        return (self.norm * (num / denom)).value
 
     def lookup_tab1(self, eta, interp_file = "./interpolation_tables/gamma_tab1_ka08.txt"):
         """
@@ -88,11 +87,11 @@ class PionDecay_gamma(object):
         delta_arr = np.array(delta)
         B_arr = np.array(B)
 
-        s_int = interp1d(eta_arr, s_arr, kind='cubic',
+        s_int = interp1d(eta_arr, s_arr, kind='linear',
                          bounds_error=False, fill_value="extrapolate")
-        delta_int = interp1d(eta_arr, delta_arr, kind='cubic',
+        delta_int = interp1d(eta_arr, delta_arr, kind='linear',
                              bounds_error=False, fill_value="extrapolate")
-        B_int = interp1d(eta_arr, B_arr, kind='cubic',
+        B_int = interp1d(eta_arr, B_arr, kind='linear',
                          bounds_error=False, fill_value="extrapolate")
 
         s_new = s_int(eta)
@@ -156,7 +155,8 @@ class PionDecay_gamma(object):
             return 0
 
     _mpc2 = (m_p * c ** 2).to('eV')
-    _E = 3.0e20 * u.eV
+    #_E = 3.0e20 * u.eV
+    _E = 8e16 * u.eV
     #Egamma = (0.5 * _E).value
 
     def _H_integrand(self, x, eta, Egamma):
@@ -208,8 +208,8 @@ class PionDecay_gamma(object):
 
         for i, gamma in enumerate(outspecene):
             self.specpg[i] = self._calc_spec_pgamma(gamma)
-            print("Executing {} out of 100 steps...\n dNdE={}".format(
-                i + 1, self.specpg[i]))
+            print("Executing {} out of {} steps...\n dNdE={}".format(
+                i + 1, len(outspecene), self.specpg[i]))
 
         return self.specpg
 
@@ -217,8 +217,8 @@ class PionDecay_positron(PionDecay_gamma):
     """Production spectra of secondary positrons from
     charged pion decay produced as secondaries from p-gamma interaction.
     """
-    def __init__(self, particle_dist, **kwargs):
-        super(PionDecay_positron, self).__init__(particle_dist, **kwargs)
+    def __init__(self, particle_dist, T=1e4 *u.K, norm=1.5e21*u.Unit('eV-3 cm-3'), **kwargs):
+        super(PionDecay_positron, self).__init__(particle_dist, T, norm, **kwargs)
 
     def lookup_tab1(self, eta, interp_file = "./interpolation_tables/positron_tab2_ka08.txt"):
         return super(PionDecay_positron, self).lookup_tab1(eta, interp_file)
@@ -281,8 +281,8 @@ class PionDecay_electron(PionDecay_positron):
     Production spectra of secondary electrons from
     charged pion decay produced as secondaries from p-gamma interaction.
     """
-    def __init__(self, particle_dist, **kwargs):
-        super(PionDecay_electron, self).__init__(particle_dist, **kwargs)
+    def __init__(self, particle_dist, T=1e4 *u.K, norm=1.5e21*u.Unit('eV-3 cm-3'), **kwargs):
+        super(PionDecay_electron, self).__init__(particle_dist, T, norm, **kwargs)
 
     def lookup_tab1(self, eta, interp_file = "./interpolation_tables/electron_tab3_ka08.txt"):
         return super(PionDecay_electron, self).lookup_tab1(eta, interp_file)
@@ -329,9 +329,9 @@ if __name__ == '__main__':
 
     start = timeit.default_timer()
     pdist1 = PL(4.3e8 / u.eV, 1e3 * u.GeV, 2.5)
-    #pg1 = PionDecay_pgamma(pdist1)
-    pg1 = PionDecay_positron(pdist1)
-    #pg1 = PionDecay_electron(pdist1)
+    #pg1 = PionDecay_gamma(pdist1, T=1e4 * u.K, norm = 1.5e21 * u.Unit('erg-3 cm-3'))
+    #pg1 = PionDecay_positron(pdist1, T=1e4 * u.K, norm = 1.5e21 * u.Unit('erg-3 cm-3'))
+    pg1 = PionDecay_electron(pdist1, T=1e4 * u.K, norm = 1.5e21 * u.Unit('erg-3 cm-3'))
 
     gamma_arr = np.linspace(0.43e-2, 1, 100) * pg1._E
 
@@ -344,15 +344,15 @@ if __name__ == '__main__':
     plt.loglog(gamma_arr, gamma_arr * sed, label='Proton index=2.5',
                lw=2.2, ls='-', color='blue')
     #plt.title(
-    #    'Gamma-ray spec. from Neutral Pion Decay (target : CMB (T=2.7 K))', fontsize=9)
-    plt.title(
-        'Positron spectrum from Charged Pion Decay (target : CMB (T=2.7 K))', fontsize=9)
+    #    'Gamma-ray spec. from Neutral Pion Decay (target : CMB ($T=10^4 K$))', fontsize=9)
     #plt.title(
-    #    'Electron spectrum from Charged Pion Decay (target : CMB (T=2.7 K))', fontsize=9)
+    #    'Positron spectrum from Charged Pion Decay (target : CMB ($T=10^4 K$))', fontsize=9)
+    plt.title(
+        'Electron spectrum from Charged Pion Decay (target : CMB ($T=10^4 K$))', fontsize=9)
     plt.xlabel('$Energy (eV)$')
     plt.ylabel(r'$E*{\rm d}N/{\rm d}E\,[cm^{-3}\,s^{-1}]$')
     plt.legend(loc='best')
     #plt.savefig('./images/pgamma_photons.png')
-    plt.savefig('./images/pgamma_positrons.png')
-    #plt.savefig('./images/pgamma_electrons.png')
+    #plt.savefig('./images/pgamma_positrons.png')
+    plt.savefig('./images/pgamma_electrons.png')
     plt.show()

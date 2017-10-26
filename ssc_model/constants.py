@@ -8,7 +8,7 @@ from astropy import constants as const
 sigma_T =  const.sigma_T.to('cm2').value
 c = const.c.to('cm/s').value
 m_e = const.m_e.to('g').value
-E_rest = (const.m_e * const.c**2).to('eV').value
+E_rest = (const.m_e * const.c**2).to('eV')
 e = const.e.esu.value
 h = const.h.to('erg*s').value
 # critical magnetic field for the analytical solution
