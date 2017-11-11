@@ -1,0 +1,24 @@
+time_grid:
+    time_min: 0
+    time_max: 3
+    time_bins: 50
+
+gamma_grid:
+    log_gamma_min: 2
+    log_gamma_max: 6
+    gamma_bins: 20
+
+emission_region:
+    log_R: 15.5
+    R_unit: 'cm'
+    delta: 15
+    log_B: 0.
+    B_unit: 'G'
+    t_esc: 1.5
+    z: 0.4
+
+injected_spectrum:
+    type: 'PowerLaw'
+    log_Norm: 3
+    Norm_unit: 'cm-3'
+    index: 2.2
