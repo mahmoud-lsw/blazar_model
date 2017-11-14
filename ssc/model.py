@@ -6,7 +6,7 @@ from astropy.coordinates import Distance
 import yaml
 
 
-__all__ = ['blob', 'power_law_eval', 'gauss_eval',
+__all__ = ['blob', 'power_law_eval', 'exponential_cutoff_power_law_eval', 'gauss_eval',
             'BaseModel', 'BaseElectron']
 
 
@@ -57,6 +57,9 @@ def power_law_eval(amplitude, gamma, index):
     """power-law in Lorentz Factor of the injected electrons"""
     return amplitude * gamma**(-index)
 
+def exponential_cutoff_power_law_eval(amplitude, gamma, gamma_c, index):
+    """power-law exponentially cut-off in Lorentz Factor of the injected electrons"""
+    return amplitude * gamma**(-index) * np.exp(-gamma/gamma_c)
 
 def gauss_eval(amplitude, mean, sigma):
     """gaussian distribution of injected electrons"""
@@ -77,6 +80,8 @@ class BaseModel(object):
             maximum time in units of R/c
         * time_bins : float
             number of time bins on which to perform the temporal evolution
+        * time_inj : float
+            maximum time of injection of the electrons, units of R/c
 
     - gamma_grid, with keys:
         * log_gamma_min : float
@@ -137,7 +142,9 @@ class BaseModel(object):
         self.time_max = self.cfg['time_grid']['time_max']
         self.time_bins = self.cfg['time_grid']['time_bins']
         self.time_grid = np.linspace(self.time_min, self.time_max, self.time_bins)
-        self.delta_t = self.time_grid[:-1] - self.time_grid[1:]
+        # the time grid is equally spaced
+        self.delta_t = self.time_grid[2] - self.time_grid[1]
+        self.time_inj = self.cfg['time_grid']['time_inj']
 
         # gamma grid parameters
         self.log_gamma_min = self.cfg['gamma_grid']['log_gamma_min']
@@ -181,6 +188,15 @@ class BaseModel(object):
             pwl = power_law_eval(amplitude, gamma, index)
             return BaseElectron(gamma, pwl)
 
+        if self.inj_spec_dict['type'] == 'ExponentialCutoffPowerLaw':
+            amplitude = 10**(self.inj_spec_dict['log_Norm']) * u.Unit(self.inj_spec_dict['Norm_unit'])
+            index = self.inj_spec_dict['index']
+            gamma_c = 10**self.inj_spec_dict['log_gamma_c']
+            # evaluate the densities
+            pwl = exponential_cutoff_power_law_eval(amplitude, gamma, gamma_c, index)
+            return BaseElectron(gamma, pwl)
+
+
 
 class BaseElectron(object):
     """Class describing a basic electron population
@@ -202,3 +218,5 @@ class BaseElectron(object):
     def __init__(self, gamma, density):
         self.gamma = gamma
         self.density = density
+        if len(gamma) != len(density):
+            print('x should have the same dimenison of y')

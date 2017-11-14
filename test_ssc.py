@@ -41,12 +41,13 @@ plt.xlabel(r'$\nu$ [Hz]', size=12)
 plt.ylabel(r'E$^2$ d$\phi$/dE [erg cm$^{-2}$ s$^{-1}$]', size=12)
 plt.ylim([1e-24, 1e-8])
 plt.show()
-fig.savefig('simple_ssc_trial.png')
+fig.savefig('ecpl_simple_ssc_trial.png')
 
 
 # test the evolution part
-num = numerics(model)
+#num = numerics(nu, model)
 # we need U_rad to get a Chang and Cooper matrix
-U_rad = syn.U_rad(model.gamma_midpts, nu, N_e)
-plt.loglog(model.gamma_midpts, U_rad)
-plt.show()
+#N_e_evol = num.evolve()
+#plt.loglog(model.gamma, N_e_evol[0].density)
+#plt.loglog(model.gamma, N_e_evol[-1].density)
+#plt.show()

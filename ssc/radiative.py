@@ -4,6 +4,7 @@ import astropy.units as u
 import astropy.constants as const
 from scipy import integrate
 from scipy.special import kv
+from .model import BaseElectron
 import naima
 from naima.utils import trapz_loglog
 import yaml
@@ -418,81 +419,66 @@ class numerics(object):
 
     Parameters
     ----------
+    nu : `~astropy.units.Quantity`
+        array of frequencies of the emission
+        we need it to calculate U_rad
     model : `~ssc.model.BaseModel`
         model defining the attributes of the emitting region
     """
 
-    def __init__(self, model):
+    def __init__(self, nu, model):
+        self.nu = nu
         self.model = model
 
-    def ChaCoo_tridiag_matrix(self, U_rad):
+    def ChaCoo_tridiag_matrix(self, N_e):
         """Implementing tridiagonal matrix of Eq. (9) in Ref. (1)
 
         Parameters
         ----------
-        U_rad : `~astropy.units.Quantity`
-            array of values of energy density per Lorentz factor bin
-
-        Returns
-        -------
-        `~numpy.ndarray`
-        matrix regulating the soultion of the differential equation
+        N_e : `~ssc.model.BaseElectron`
+            electorn population needed to evaluate U_rad
+            at each step U_rad depends on the synchrotron
+            radiation emitted
         """
-        def cool_rate(U_rad, gamma):
+        def cool_rate(gamma):
             """cooling rate from Eq. (2) in Ref. (1)
-            U_B is fixed so we don't need to pass it as argument"""
-            _rate =  4 / 3 * sigma_T / mec * (self.model.blob.U_B.value + U_rad) * gamma**2
-            return _rate.value
+            U_B is fixed so we don't need to pass it as argument
+            """
+            # we need a synchrotron object to get U_rad
+            syn = Synchrotron(self.model)
+            U_rad = syn.U_rad(gamma, self.nu, N_e)
+            prefactor =  (4 / 3 * sigma_T / mec).value
+            rate =  (self.model.blob.U_B.value + U_rad.value) * gamma**2
+            return prefactor * rate
 
         # implementing the terms in Eq. (10) of Ref. (1)
         # V1 is an array of zeros, no need to be implemented
         # V2
-        V2 = 1 + self.model.delta_t/self.model.t_esc + \
-                 self.model.delta_t * cool_rate(U_rad, self.model.gamma_midpts[:-1])/delta_gamma
+        V2 = 1 + self.model.delta_t/self.model.blob.t_esc + \
+                 self.model.delta_t * cool_rate(self.model.gamma_midpts[:-1])/self.model.delta_gamma
+        # Chang Cooper boundaries condition, Eq.(18) Park Petrosian, 1996
+        # http://adsabs.harvard.edu/full/1996ApJS..103..255P
+        V2 = np.append(V2, 0)
 
-        V3 = - delta_t * cool_rate(U_rad, self.model.gamma_midpts[1:])/delta_gamma
+        V3 = - self.model.delta_t * cool_rate(self.model.gamma_midpts[1:])/self.model.delta_gamma
 
         ChaCoo = np.diagflat(V2, 0) + np.diagflat(V3,-1)
         return ChaCoo
 
-'''
-        # loop on the energy to fill the matrix
-        for i in range(N):
-            gamma_minus_half = self.model.gamma_grid_midpts[i]                              # \gamma_{j-1/2} of Reference
-            gamma_plus_half = self.model.gamma_grid_midpts[i] + self.model.delta_gamma[i]   # \gamma_{j+1/2} of Reference
-            delta_gamma = self.model.delta_gamma[i]
-            delta_t = self.model.delta_t
-            t_esc = self.model.t_esc
-            U_B = self.model.U_B
-            # when we'll introduce synchrotron radiation U_rad will be an array
-            # with a value for each point of the gamma_grid (the extremes of integration depend on gamma)
-            U_rad = self.model.U_rad[i]
-            # Eq.s (10) of Reference
-            V2 = 1 + delta_t/t_esc + \
-                     (delta_t * cool_rate(U_B, U_rad, gamma_minus_half))/delta_gamma
-            V3 = - (delta_t * cool_rate(U_B, U_rad, gamma_plus_half))/delta_gamma
-            # let's loop on another dimension to fill the diagonal of the matrix
-            for j in range(N):
-                if j == i:
-                    ChaCoo_matrix[i,j] = V2
-                if j == i+1:
-                    ChaCoo_matrix[i,j] = V3
-
-        # Chang Cooper boundaries condition, Eq.(18) Park Petrosian, 1996
-        # http://adsabs.harvard.edu/full/1996ApJS..103..255P
-        ChaCoo_matrix[N-2,N-1] = 0.
-        return ChaCoo_matrix
-
-
     def evolve(self):
+        """
+        Returns
+        -------
+        list of `~ssc.model.BaseElectron`
+        """
+        N_e_evol = []
+        # the initial spectrum is an empty array
+        N_e = BaseElectron(self.model.gamma_midpts,
+                            np.zeros(len(self.model.gamma_midpts)) * u.Unit('cm-3'))
 
-        # injected spectrum
-        #N_e = self.model.N_e_inj
-        N_e = np.zeros(len(self.model.gamma_grid))
         # injecton term, to be added each delta_t up to the maximum injection time
-        # specified by model.inj_time
-        Q_e = self.model.powerlaw_injection
-        delta_t = self.model.delta_t
+        # specified by model.time_inj
+        Q_e = self.model.N_e_inj(self.model.gamma_midpts)
 
         # time grid loop
         time_past_injection = 0.
@@ -500,20 +486,24 @@ class numerics(object):
         for time in self.model.time_grid:
             # here N^{i+1} of Reference --> N_e_tmp
             # here N^{i} of Reference --> N_e
-
             # solve the system with Eq.(11):
-            if time_past_injection <= self.model.inj_time:
-                N_e_tmp = np.linalg.solve(self.ChaCoo_tridiag_matrix(), N_e + Q_e*delta_t)
+            if time_past_injection <= self.model.time_inj:
+                N_e_tmp = np.linalg.solve(self.ChaCoo_tridiag_matrix(N_e),
+                                          N_e.density.value + Q_e.density.value * self.model.delta_t)
             # no more injection after the established t_inj
             else:
-                N_e_tmp = np.linalg.solve(self.ChaCoo_tridiag_matrix(), N_e)
+                N_e_tmp = np.linalg.solve(self.ChaCoo_tridiag_matrix(N_e),
+                                          N_e.denisty.value)
+            # the soultion is just an array of denisties, we turn it into a
+            # BaseElectron object
+            N_e_tmp = BaseElectron(self.model.gamma_midpts, N_e_tmp)
 
             # swap!, now we are moving to the following istant of time
             # N^{i+1} --> N^{i} and restart
             N_e = N_e_tmp
+            N_e_evol.append(N_e)
             # update the time past injection
-            #print ('t after injection: ', time_past_injection/self.model.crossing_time, ' crossing time')
-            time_past_injection += delta_t
+            print ('t after injection: ', time_past_injection/self.model.crossing_time, ' crossing time')
+            time_past_injection += self.model.delta_t
 
-        return N_e
-'''
+        return N_e_evol
