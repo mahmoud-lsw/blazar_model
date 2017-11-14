@@ -5,22 +5,22 @@ time_grid:
     time_inj : 2
 
 gamma_grid:
-    log_gamma_min: 2
-    log_gamma_max: 6
+    log10_gamma_min: 2
+    log10_gamma_max: 6
     gamma_bins: 50
 
 emission_region:
-    log_R: 15.5
+    log10_R: 15.5
     R_unit: 'cm'
     delta: 20
-    log_B: -1
+    log10_B: -1
     B_unit: 'G'
     t_esc: 1.5
     z: 0.4
 
 injected_spectrum:
     type: 'ExponentialCutoffPowerLaw'
-    log_Norm: 4
+    log10_Norm: 4
     Norm_unit: 'cm-3'
     index: 2.2
-    log_gamma_c: 4.5
+    log10_gamma_c: 4.5

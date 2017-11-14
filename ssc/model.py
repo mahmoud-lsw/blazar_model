@@ -84,19 +84,19 @@ class BaseModel(object):
             maximum time of injection of the electrons, units of R/c
 
     - gamma_grid, with keys:
-        * log_gamma_min : float
+        * log10_gamma_min : float
             log10 of the minimum Lorentz factor of the electron distribution
-        * log_gamma_max
+        * log10_gamma_max
             log10 of the maximum Lorentz factor of the electron distribution
         * gamma_bins
             number of bins in the grid of Lorentz factor
 
     - emission_region, with keys:
-        * log_R : float
+        * log10_R : float
             log10 of the size (radius) of the emitting region
         * R_unit : string
             units of the emeitting region ('cm' favourably)
-        * log_B : float
+        * log10_B : float
             log10 of the value of the magnetic field tangled with the emitting region
         * B_unit : string
             unit of the magnetic field ('G' favourably)
@@ -110,7 +110,7 @@ class BaseModel(object):
     - injected_spectrum (e.g PowerLaw)
         * type : string
             distribution of the electrons injected ('PowerLaw' as example)
-        * log_Norm : float
+        * log10_Norm : float
             log10 of the normalization of the injected distribution
         * Norm_units : string
             unit of the normalization ('cm-3' favourably)
@@ -130,8 +130,8 @@ class BaseModel(object):
 
         # emission regions parameters definition, blob object creation
         self.blob = blob(
-            R = 10**(self.cfg['emission_region']['log_R']) * u.Unit(self.cfg['emission_region']['R_unit']),
-            B = 10**(self.cfg['emission_region']['log_B']) * u.Unit(self.cfg['emission_region']['B_unit']),
+            R = 10**(self.cfg['emission_region']['log10_R']) * u.Unit(self.cfg['emission_region']['R_unit']),
+            B = 10**(self.cfg['emission_region']['log10_B']) * u.Unit(self.cfg['emission_region']['B_unit']),
             t_esc = self.cfg['emission_region']['t_esc'],
             delta =  self.cfg['emission_region']['delta'],
             z = self.cfg['emission_region']['z']
@@ -147,15 +147,15 @@ class BaseModel(object):
         self.time_inj = self.cfg['time_grid']['time_inj']
 
         # gamma grid parameters
-        self.log_gamma_min = self.cfg['gamma_grid']['log_gamma_min']
-        self.log_gamma_max = self.cfg['gamma_grid']['log_gamma_max']
-        self.gamma_min = 10**self.log_gamma_min
-        self.gamma_max = 10**self.log_gamma_max
+        self.log10_gamma_min = self.cfg['gamma_grid']['log10_gamma_min']
+        self.log10_gamma_max = self.cfg['gamma_grid']['log10_gamma_max']
+        self.gamma_min = 10**self.log10_gamma_min
+        self.gamma_max = 10**self.log10_gamma_max
         self.gamma_bins = self.cfg['gamma_grid']['gamma_bins']
         # note the in Ref. (1) a grid spanning from N_{-1} to N_{n+1}
         # is considered and then the electron density is evaluated always
         # at the midpoints
-        self.gamma_ext = np.logspace(self.log_gamma_min, self.log_gamma_max, self.gamma_bins)
+        self.gamma_ext = np.logspace(self.log10_gamma_min, self.log10_gamma_max, self.gamma_bins)
         # we define the midpoints through the extended {-1,n+1} grid
         # in order to have N_{-1/2} N_{n+1/2}
         self.gamma_midpts = np.sqrt(self.gamma_ext[:-1]*self.gamma_ext[1:])
@@ -182,16 +182,16 @@ class BaseModel(object):
             density [cm-3] of the injected spectrum
         """
         if self.inj_spec_dict['type'] == 'PowerLaw':
-            amplitude = 10**(self.inj_spec_dict['log_Norm']) * u.Unit(self.inj_spec_dict['Norm_unit'])
+            amplitude = 10**(self.inj_spec_dict['log10_Norm']) * u.Unit(self.inj_spec_dict['Norm_unit'])
             index = self.inj_spec_dict['index']
             # evaluate the densities
             pwl = power_law_eval(amplitude, gamma, index)
             return BaseElectron(gamma, pwl)
 
         if self.inj_spec_dict['type'] == 'ExponentialCutoffPowerLaw':
-            amplitude = 10**(self.inj_spec_dict['log_Norm']) * u.Unit(self.inj_spec_dict['Norm_unit'])
+            amplitude = 10**(self.inj_spec_dict['log10_Norm']) * u.Unit(self.inj_spec_dict['Norm_unit'])
             index = self.inj_spec_dict['index']
-            gamma_c = 10**self.inj_spec_dict['log_gamma_c']
+            gamma_c = 10**self.inj_spec_dict['log10_gamma_c']
             # evaluate the densities
             pwl = exponential_cutoff_power_law_eval(amplitude, gamma, gamma_c, index)
             return BaseElectron(gamma, pwl)
