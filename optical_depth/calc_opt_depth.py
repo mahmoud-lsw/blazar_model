@@ -23,6 +23,7 @@ import astropy.constants as const
 from astropy.cosmology import FlatLambdaCDM
 from sympy.functions.special.delta_functions import Heaviside
 import matplotlib.pyplot as plt
+from naima.models import BrokenPowerLaw
 
 _sigma_T = sigma_T.cgs.value
 _mec2 = (m_e * c ** 2).to('eV').value
@@ -164,9 +165,8 @@ class CalcOptDepthPWL(object):
         plt.ylim([0, 5.])
         plt.show()
 
-    def tau_YY(self, E, z, eps_pk, f_eps_pk, t_var, delta_D, a, b, x_a=1e-4, x_b=1e4):
-        """
-        Function for evaluating the optical depth as a function of the energy
+    def tau_YY(self, E, z, t_var, delta_D, BPL, x_a=1e-4, x_b=1e4):
+        """Function for evaluating the optical depth as a function of the energy
         in the case of target photon gas with broken power-law photon distribution
         Eq. (10.27) of reference 1.
 
@@ -176,23 +176,21 @@ class CalcOptDepthPWL(object):
             energy of the colliding photon
         z : float
             redshift of the source
-        eps_pk : float
-            adimensional energy peak of the target photon distribution
-        f_eps_pk : astropy.units('erg cm-2 s-1')
-            peak of the target photon distribution
         t_var : astropy.units('s')
             measured variability time scale
         delta_D : float
             relativistic doppler factor
-        a : float
-            first spectral index of the broken power-law describing the target
-        b : float
-            second spectral index of the broken power-law describing the target
-
+        BPL : `~naima.models.BrokenPowerLaw`
+            Broken Power Law describing the target photon
         Returns:
         --------
         float, value of the tau_YY for an incident photon of energy E
         """
+        # we need to get the parameters a, b, eps_pk and f_eps_pk from the BPL
+        a = BPL.alpha_2 + 2 # we want the value in a nu Fnu rapresentation
+        b = BPL.alpha_1 + 2 # we want the value in a nu Fnu rapresentation
+        eps_pk = (BPL.e_break.to('eV') / _mec2_u).decompose()
+        f_eps_pk = (BPL.e_break**2 * BPL.amplitude).to('erg cm-2 s-1')
 
         # listed all the values we need for the prefactor calculation
         r_e = 2.8179403227 * 1e-13 * u.cm
@@ -223,7 +221,7 @@ class CalcOptDepthPWL(object):
 
 if __name__ == '__main__':
 
-
+    """
     ################## Test for Class CalcOptDepthBB #############
     Tarr = [1e3, 1e4, 1e5] * u.K
     # Norm choosen to reproduce Fig. 1 upper panel of ref. [3]
@@ -257,7 +255,7 @@ if __name__ == '__main__':
     plt.legend(loc='best')
     fig1.savefig('./images/tau_BB_trials.png')
     plt.show()
-
+    """
 
     ################## Test for Class CalcOptDepthPWL #############
     taupl = CalcOptDepthPWL()
@@ -266,11 +264,22 @@ if __name__ == '__main__':
     En = np.logspace(9, 16, 50) * u.Unit('eV')
 
     fig2 = plt.figure()
+    # define the three BPLs
+    # reproduce Figure 10.4 of Ref. (1
+    f_eps_pk  = 1e-10 * u.Unit('erg cm-2 s-1')
+    eps_pk = 1e-5
+    E_pk = (eps_pk * _mec2_u).to('erg')
+    # I am adding + 2 because all these indexes are calculated in a nuFnu frame
+    BPL1 = BrokenPowerLaw(f_eps_pk / E_pk**2, E_pk, E_pk, -0.5 - 2, 0.5 - 2)
+    print((BPL1.e_break**2 * BPL1.amplitude).to('erg cm-2 s-1'))
+    print((BPL1.e_break.to('eV') / _mec2_u).decompose())
+    BPL2 = BrokenPowerLaw(f_eps_pk / E_pk**2, E_pk, E_pk, -1 - 2, 1 - 2)
+    BPL3 = BrokenPowerLaw(f_eps_pk / E_pk**2, E_pk, E_pk, -2 - 2, 2 - 2)
 
-    for [a, b] in [[1 / 2, -1 / 2], [1, -1], [2, -2]]:
-        tau = np.array([taupl.tau_YY(
-            _E, 1, 1e-5, 1e-10 * u.Unit('erg cm-2 s-1'), 1e5 * u.s, 10, a, b) for _E in En])
-        plt.loglog(En, tau, lw=1.5, label='a=' + str(a) + ' , b=' + str(b))
+
+    for bpl in [BPL1, BPL2, BPL3]:
+        tau = np.array([taupl.tau_YY(_E, 1, 1e5 * u.s, 10, bpl, x_a=1e-4, x_b=1e4) for _E in En])
+        plt.loglog(En, tau, lw=1.5, label='a=' + str(bpl.alpha_2 + 2) + ' , b=' + str(bpl.alpha_1 + 2))
 
     plt.legend(loc=2)
     plt.title('Optical Depth vs Gamma-ray Energy (target PowerLaw)')
